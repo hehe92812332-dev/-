@@ -5,6 +5,7 @@ import {
   ADOPT_DEADLINE_DAYS,
   DIRECT_ANSWER_HOURS,
   DIRECT_COST_MULTIPLIER,
+  MAX_QUESTION_COST,
   MEMBERSHIP_PLANS,
   MIN_WITHDRAW_TOKENS,
   REVOKE_DAYS,
@@ -77,7 +78,7 @@ export function withdrawable(state: State, userId: string, now = Date.now()) {
   return user ? user.wallet.earned - pendingEarned(state, userId, now) : 0;
 }
 
-/** 질문 비용 계산: 등급 기본 비용 → (1:1 지정 시) 할증 → 멤버십 할인 */
+/** 질문 비용 계산: 등급 기본 비용 → (1:1 지정 시) 할증, 최대 MAX_QUESTION_COST → 멤버십 할인 */
 export function quoteQuestion(
   state: State,
   asker: User | null,
@@ -88,7 +89,7 @@ export function quoteQuestion(
   const base = tier.questionCost;
   const plan = membershipPlan(asker);
   const skipSurcharge = plan && "noDirectSurcharge" in plan && plan.noDirectSurcharge;
-  const surcharge = direct && !skipSurcharge ? Math.ceil(base * DIRECT_COST_MULTIPLIER) - base : 0;
+  const surcharge = direct && !skipSurcharge ? Math.min(Math.ceil(base * DIRECT_COST_MULTIPLIER), MAX_QUESTION_COST) - base : 0;
   const discount = plan ? Math.floor((base + surcharge) * plan.discountRate) : 0;
   return { tier, base, surcharge, discount, total: base + surcharge - discount, plan };
 }

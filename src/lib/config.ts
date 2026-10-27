@@ -27,6 +27,9 @@ export const DIRECT_ANSWER_HOURS = 48;
 /** 1:1 지정 질문 비용 = 해당 치료사 등급 질문 비용 × 배수 (JustAnswer식 전문가 지정) */
 export const DIRECT_COST_MULTIPLIER = 1.5;
 
+/** 접근성을 위한 질문 1건 비용 상한. 1:1 할증을 포함해도 이 값을 넘지 않습니다 (멤버십 할인은 상한 적용 후). */
+export const MAX_QUESTION_COST = 50;
+
 /** 채택 보상·팁이 환전 가능해지기까지의 정산 대기 기간 (크몽식 구매확정 후 정산) */
 export const SETTLEMENT_HOLD_DAYS = 3;
 
@@ -34,10 +37,10 @@ export const SETTLEMENT_HOLD_DAYS = 3;
 export const REVOKE_DAYS = 7;
 
 /** 좋은 답변에 보내는 감사 팁 (토스·카카오 후원, 슈퍼챗 방식) */
-export const TIP_OPTIONS = [5, 10, 30] as const;
+export const TIP_OPTIONS = [3, 5, 10] as const;
 
 /** 현상금 추가 단위 (지식iN 내공 추가 / Stack Overflow bounty 방식) */
-export const BOUNTY_ADD_OPTIONS = [10, 20, 50] as const;
+export const BOUNTY_ADD_OPTIONS = [5, 10, 20] as const;
 
 export const PAYMENT_METHODS = [
   { id: "card", label: "신용·체크카드" },
@@ -142,7 +145,7 @@ export const TIERS: Tier[] = [
     minYears: 0,
     minHours: 0,
     needsDegree: false,
-    questionCost: 10,
+    questionCost: 5,
     colors: ["#94a3b8", "#64748b"],
     description: "면허 인증 완료, 8등급 조건을 향해 다듬어지는 중",
   },
@@ -154,7 +157,7 @@ export const TIERS: Tier[] = [
     minYears: 3,
     minHours: 200,
     needsDegree: false,
-    questionCost: 15,
+    questionCost: 10,
     colors: ["#cbd5e1", "#a8a29e"],
     description: "경력 3년 + 학회 인정 교육 200시간",
   },
@@ -166,7 +169,7 @@ export const TIERS: Tier[] = [
     minYears: 3,
     minHours: 200,
     needsDegree: true,
-    questionCost: 20,
+    questionCost: 13,
     colors: ["#f9a8d4", "#67e8f9"],
     description: "경력 3년 + 교육 200시간 + 석·박사",
   },
@@ -178,7 +181,7 @@ export const TIERS: Tier[] = [
     minYears: 5,
     minHours: 300,
     needsDegree: false,
-    questionCost: 30,
+    questionCost: 17,
     colors: ["#fbbf24", "#ea580c"],
     description: "경력 5년 + 교육 300시간",
   },
@@ -190,7 +193,7 @@ export const TIERS: Tier[] = [
     minYears: 5,
     minHours: 300,
     needsDegree: true,
-    questionCost: 40,
+    questionCost: 22,
     colors: ["#c084fc", "#7e22ce"],
     description: "경력 5년 + 교육 300시간 + 석·박사",
   },
@@ -202,7 +205,7 @@ export const TIERS: Tier[] = [
     minYears: 10,
     minHours: 400,
     needsDegree: false,
-    questionCost: 55,
+    questionCost: 28,
     colors: ["#34d399", "#047857"],
     description: "경력 10년 + 교육 400시간",
   },
@@ -214,7 +217,7 @@ export const TIERS: Tier[] = [
     minYears: 10,
     minHours: 400,
     needsDegree: true,
-    questionCost: 70,
+    questionCost: 35,
     colors: ["#60a5fa", "#1d4ed8"],
     description: "경력 10년 + 교육 400시간 + 석·박사",
   },
@@ -226,7 +229,7 @@ export const TIERS: Tier[] = [
     minYears: 15,
     minHours: 500,
     needsDegree: false,
-    questionCost: 90,
+    questionCost: 42,
     colors: ["#fb7185", "#be123c"],
     description: "경력 15년 + 교육 500시간",
   },
@@ -238,7 +241,7 @@ export const TIERS: Tier[] = [
     minYears: 15,
     minHours: 500,
     needsDegree: true,
-    questionCost: 120,
+    questionCost: 50,
     colors: ["#a5f3fc", "#6366f1"],
     description: "경력 15년 + 교육 500시간 + 석·박사",
   },
