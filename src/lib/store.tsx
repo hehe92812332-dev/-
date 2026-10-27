@@ -10,15 +10,24 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import type { Category, Degree, HospitalType, MembershipPlanId, PaymentMethodId, ReportReason, TierId } from "./config";
 import * as ledger from "./ledger";
 import type { Outcome, State } from "./ledger";
+import {
+  localFeed,
+  localProfile,
+  localStats,
+  localTherapists,
+  localTierCounts,
+  type FeedParams,
+  type TherapistParams,
+} from "./local-queries";
 import { startBillingAuth, startTokenPayment } from "./payments-client";
 import { seedChats, seedPosts, seedRatings, seedTransactions, seedUsers } from "./seed";
-import type { Board, ChatMessage, RatingScore, ReportTarget, Role, User } from "./types";
+import type { Block, Board, ChatMessage, Post, Rating, RatingScore, ReportTarget, Role, Transaction, User, UserStats } from "./types";
 
 export { balanceOf, userTier } from "./ledger";
 
 export const SERVER_MODE = process.env.NEXT_PUBLIC_APP_MODE === "server";
 
-const STORAGE_KEY = "pt-bridge:v8";
+const STORAGE_KEY = "pt-bridge:v9";
 /** 데모에서 선택한 계정. 공유 데이터와 분리해 탭마다 다른 계정으로 채팅을 시험할 수 있게 합니다. */
 const ME_KEY = "pt-bridge:me";
 
@@ -78,18 +87,49 @@ function useStoreValue() {
   const pathname = usePathname();
   const [state, setState] = useState<State>(SERVER_MODE ? emptyState : demoState);
   const [me, setMe] = useState<Me | null>(null);
+  const [unread, setUnread] = useState(0);
   const [ready, setReady] = useState(false);
   // 액션이 항상 최신 상태를 기준으로 실행되도록 (결제창처럼 지연 실행되는 경우 대비)
   const latest = useRef(state);
   latest.current = state;
 
+  // ───────── 서버 모드 캐시: 화면이 필요한 만큼 받아 합칩니다 ─────────
+  const mergeUsers = useCallback((list: User[]) => {
+    if (!list.length) return;
+    setState((s) => {
+      const map = new Map(s.users.map((u) => [u.id, u]));
+      for (const u of list) {
+        const old = map.get(u.id);
+        // 내 지갑은 bootstrap 값만 신뢰 (다른 응답의 공개용 사본이 덮어쓰지 않게)
+        map.set(u.id, old && u.id === s.currentUserId ? { ...u, wallet: old.wallet, membership: old.membership } : { ...old, ...u, stats: { ...old?.stats, ...u.stats } as UserStats });
+      }
+      return { ...s, users: [...map.values()] };
+    });
+  }, []);
+
+  const mergePosts = useCallback((list: Post[]) => {
+    if (!list.length) return;
+    setState((s) => {
+      const map = new Map(s.posts.map((p) => [p.id, p]));
+      for (const p of list) {
+        const old = map.get(p.id);
+        // 목록 응답(답변 본문 없음)이 상세에서 받은 답변을 지우지 않게
+        map.set(p.id, old && p.answers.length === 0 && (p.answerCount ?? 0) > 0 ? { ...old, ...p, answers: old.answers } : { ...old, ...p });
+      }
+      return { ...s, posts: [...map.values()] };
+    });
+  }, []);
+
   const refresh = useCallback(async () => {
     if (!SERVER_MODE) return;
-    const r = await api<{ state: State; me: Me | null }>("/api/bootstrap");
-    if (r && "state" in r) {
-      setState(r.state);
-      setMe(r.me);
-    }
+    const r = await api<{ me: Me | null; user: User | null; transactions: Transaction[]; blocks: Block[]; unread: number }>("/api/bootstrap");
+    if (!r || !("me" in r)) return;
+    setMe(r.me);
+    setUnread(r.unread);
+    setState((s) => {
+      const users = r.user ? [r.user, ...s.users.filter((u) => u.id !== r.user!.id)] : s.users;
+      return { ...s, users, transactions: r.transactions, blocks: r.blocks, currentUserId: r.user?.id ?? null };
+    });
   }, []);
 
   useEffect(() => {
@@ -160,11 +200,120 @@ function useStoreValue() {
   const currentUser = state.users.find((u) => u.id === state.currentUserId) ?? null;
   const getUser = useCallback((id: string) => state.users.find((u) => u.id === id), [state.users]);
 
-  /** 데모: 원장 함수를 바로 실행 / 서버: API 호출 후 새로고침 */
+  // ───────── 조회 (두 모드 같은 형태) ─────────
+  const fetchPost = useCallback(
+    async (id: string): Promise<Result> => {
+      if (!SERVER_MODE) return latest.current.posts.some((p) => p.id === id) ? { ok: true } : { ok: false, error: "글을 찾을 수 없습니다." };
+      const r = await api<{ post?: Post; users?: User[]; myRatings?: Rating[]; ok?: false; error?: string }>(`/api/posts/${encodeURIComponent(id)}`);
+      if (!r.post) return { ok: false, error: r.error ?? "글을 찾을 수 없습니다." };
+      mergeUsers(r.users ?? []);
+      setState((s) => ({
+        ...s,
+        posts: [r.post!, ...s.posts.filter((p) => p.id !== id)],
+        ratings: [...s.ratings.filter((x) => x.postId !== id), ...(r.myRatings ?? [])],
+      }));
+      return { ok: true };
+    },
+    [mergeUsers],
+  );
+
+  const fetchFeed = useCallback(
+    async (params: FeedParams): Promise<{ ids: string[]; nextCursor: string | null; error?: string }> => {
+      if (!SERVER_MODE) return localFeed(latest.current, params);
+      const qs = new URLSearchParams(
+        Object.entries({ ...params, forMe: params.forMe ? "1" : undefined }).filter(([, v]) => v !== undefined && v !== null && v !== "") as [string, string][],
+      );
+      const r = await api<{ posts?: Post[]; users?: User[]; nextCursor?: string | null; error?: string }>(`/api/feed?${qs}`);
+      if (!r.posts) return { ids: [], nextCursor: null, error: r.error };
+      mergeUsers(r.users ?? []);
+      mergePosts(r.posts);
+      return { ids: r.posts.map((p) => p.id), nextCursor: r.nextCursor ?? null };
+    },
+    [mergePosts, mergeUsers],
+  );
+
+  const fetchTherapists = useCallback(
+    async (params: TherapistParams): Promise<{ ids: string[]; nextCursor: string | null }> => {
+      if (!SERVER_MODE) return localTherapists(latest.current, params);
+      const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v) as [string, string][]);
+      const r = await api<{ ids?: string[]; users?: User[]; nextCursor?: string | null }>(`/api/therapists?${qs}`);
+      mergeUsers(r.users ?? []);
+      return { ids: r.ids ?? [], nextCursor: r.nextCursor ?? null };
+    },
+    [mergeUsers],
+  );
+
+  const fetchProfile = useCallback(
+    async (id: string): Promise<{ scoreCounts: Record<string, number>; tags: [string, number][]; postIds: string[] } | null> => {
+      if (!SERVER_MODE) return localProfile(latest.current, id);
+      const r = await api<{ user?: User; scoreCounts: Record<string, number>; tags: [string, number][]; posts: Post[]; users: User[] }>(
+        `/api/users/${encodeURIComponent(id)}`,
+      );
+      if (!r.user) return null;
+      mergeUsers([r.user, ...r.users]);
+      mergePosts(r.posts);
+      return { scoreCounts: r.scoreCounts, tags: r.tags, postIds: r.posts.map((p) => p.id) };
+    },
+    [mergePosts, mergeUsers],
+  );
+
+  const fetchTierCounts = useCallback(async (): Promise<{ counts: Record<string, number>; questions: number }> => {
+    if (!SERVER_MODE) return { counts: localTierCounts(latest.current), questions: latest.current.posts.length };
+    const r = await api<{ counts?: Record<string, number>; questions?: number }>("/api/stats/tiers");
+    return { counts: r.counts ?? {}, questions: r.questions ?? 0 };
+  }, []);
+
+  /** 라운지 채널: 최신 50개 또는 이전 기록(before) 불러오기 */
+  const loadChannel = useCallback(
+    async (channel: string, before?: string): Promise<{ hasMore: boolean; channels: Record<string, string> }> => {
+      if (!SERVER_MODE) return { hasMore: false, channels: {} };
+      const qs = new URLSearchParams({ channel, ...(before ? { before } : {}) });
+      const r = await api<{ messages?: ChatMessage[]; users?: User[]; channels?: Record<string, string>; hasMore?: boolean }>(`/api/chats?${qs}`);
+      mergeUsers(r.users ?? []);
+      if (r.messages?.length)
+        setState((s) => ({
+          ...s,
+          chats: [...r.messages!, ...s.chats.filter((c) => !r.messages!.some((m) => m.id === c.id))].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+        }));
+      return { hasMore: !!r.hasMore, channels: r.channels ?? {} };
+    },
+    [mergeUsers],
+  );
+
+  /** 라운지 새 메시지 확인 (폴링) */
+  const pollChannel = useCallback(
+    async (channel: string): Promise<Record<string, string>> => {
+      if (!SERVER_MODE) return {};
+      const mine = latest.current.chats.filter((c) => (c.channel ?? "자유") === channel);
+      const after = mine.length ? mine[mine.length - 1].createdAt : new Date(0).toISOString();
+      const r = await api<{ messages?: ChatMessage[]; users?: User[]; channels?: Record<string, string> }>(
+        `/api/chats?${new URLSearchParams({ channel, after })}`,
+      );
+      mergeUsers(r.users ?? []);
+      if (r.messages?.length) setState((s) => ({ ...s, chats: [...s.chats, ...r.messages!.filter((m) => !s.chats.some((c) => c.id === m.id))] }));
+      return r.channels ?? {};
+    },
+    [mergeUsers],
+  );
+
+  /** 회원 표시값: 서버가 준 값, 없으면(데모) 직접 계산 */
+  const statsOf = useCallback(
+    (userId: string): UserStats => {
+      const u = state.users.find((x) => x.id === userId);
+      if (SERVER_MODE && u?.stats) return u.stats;
+      return u ? localStats(state, u) : { temperature: 36.5, ratingCount: 0, adoptedCount: 0 };
+    },
+    [state],
+  );
+
+  /** 데모: 원장 함수를 바로 실행 / 서버: API 호출 후 필요한 부분만 새로고침 */
   const run = async (action: string, args: object, fn: (s: State, userId: string) => Outcome): Promise<Result> => {
     if (SERVER_MODE) {
       const r = await api("/api/actions", { method: "POST", body: JSON.stringify({ action, ...args }) });
-      if (r.ok) await refresh();
+      if (r.ok) {
+        const postId = (args as { postId?: string }).postId;
+        await Promise.all([refresh(), postId ? fetchPost(postId) : null]);
+      }
       return r;
     }
     const s = latest.current;
@@ -245,15 +394,6 @@ function useStoreValue() {
     if (SERVER_MODE) await api("/api/actions", { method: "POST", body: JSON.stringify({ action: "toggleLike", postId, answerId }) });
   };
 
-  /** 라운지 새 메시지 가져오기 (서버 모드 폴링) */
-  const pollChats = useCallback(async () => {
-    if (!SERVER_MODE) return;
-    const chats = latest.current.chats;
-    const after = chats.length ? chats[chats.length - 1].createdAt : new Date(0).toISOString();
-    const r = await api<{ messages?: ChatMessage[] }>(`/api/chats?after=${encodeURIComponent(after)}`);
-    if (r.messages?.length)
-      setState((s) => ({ ...s, chats: [...s.chats, ...r.messages!.filter((m) => !s.chats.some((c) => c.id === m.id))] }));
-  }, []);
 
   return {
     ...state,
@@ -264,10 +404,19 @@ function useStoreValue() {
     currentUser,
     getUser,
     refresh,
+    unread,
+    setUnread,
     signup,
     viewPost,
     toggleLike,
-    pollChats,
+    fetchPost,
+    fetchFeed,
+    fetchTherapists,
+    fetchProfile,
+    fetchTierCounts,
+    loadChannel,
+    pollChannel,
+    statsOf,
     switchUser: (id: string | null) => setState((s) => ({ ...s, currentUserId: id })),
     resetDemo: () => setState(demoState()),
     buyTokens: (packageId: string, method: PaymentMethodId): Promise<Result> =>
@@ -277,7 +426,7 @@ function useStoreValue() {
     revokePurchase: (txId: string) => run("revokePurchase", { txId }, (s, u) => ledger.revokePurchase(s, u, txId)),
     setAutoRenew: (on: boolean) => run("setAutoRenew", { on }, (s, u) => ledger.setAutoRenew(s, u, on)),
     withdraw: (tokens: number, account: string) => run("withdraw", { tokens, account }, (s, u) => ledger.withdraw(s, u, tokens, account)),
-    createPost: (input: { board: Board; title: string; body: string; category: Category; targetTier: TierId; directTherapistId?: string }) =>
+    createPost: (input: { board: Board; title: string; body: string; category: Category; targetTier: TierId; directTherapistId?: string; autoLower?: boolean }) =>
       run("createPost", input, (s, u) => ledger.createPost(s, u, input)),
     addBounty: (postId: string, amount: number) => run("addBounty", { postId, amount }, (s, u) => ledger.addBounty(s, u, postId, amount)),
     addAnswer: (postId: string, body: string) => run("addAnswer", { postId, body }, (s, u) => ledger.addAnswer(s, u, postId, body)),
@@ -285,11 +434,13 @@ function useStoreValue() {
     cancelPost: (postId: string) => run("cancelPost", { postId }, (s, u) => ledger.cancelPost(s, u, postId)),
     tip: (postId: string, answerId: string, amount: number) => run("tip", { postId, answerId, amount }, (s, u) => ledger.tip(s, u, postId, answerId, amount)),
     rate: (input: { postId: string; answerId?: string; score: RatingScore; tags: string[] }) => run("rate", input, (s, u) => ledger.rate(s, u, input)),
-    sendChat: async (body: string, kind: ChatMessage["kind"] = "text") => {
-      const r = await run("sendChat", { body, kind }, (s, u) => ledger.sendChat(s, u, body, kind));
-      if (r.ok) await pollChats();
+    sendChat: async (body: string, kind: ChatMessage["kind"] = "text", channel = "자유") => {
+      const r = await run("sendChat", { body, kind, channel }, (s, u) => ledger.sendChat(s, u, body, kind, channel));
+      if (r.ok) await pollChannel(channel);
       return r;
     },
+    lowerTier: (postId: string, tier: TierId) => run("lowerTier", { postId, tier }, (s, u) => ledger.lowerTargetTier(s, u, postId, tier)),
+    balanceRefund: (account: string) => run("balanceRefund", { account }, (s, u) => ledger.requestBalanceRefund(s, u, account)),
     report: (input: { targetType: ReportTarget; targetId: string; reason: ReportReason; detail: string }) =>
       run("report", input, (s, u) => ledger.report(s, u, input)),
     block: (userId: string) => run("block", { userId }, (s, u) => ledger.block(s, u, userId)),

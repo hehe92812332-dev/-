@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { ArrowLeft, Info, UserRoundCheck, X } from "lucide-react";
 import { ADOPT_DEADLINE_DAYS, CATEGORIES, DIRECT_ANSWER_HOURS, TIERS, type Category, type TierId } from "@/lib/config";
 import { quoteQuestion } from "@/lib/ledger";
-import { balanceOf, userTier, useStore } from "@/lib/store";
-import { gradeLabel, tierRank } from "@/lib/tier";
+import { balanceOf, useStore } from "@/lib/store";
+import { eligibleFromCounts } from "@/lib/local-queries";
+import { useTierCounts } from "@/lib/queries";
+import { gradeLabel } from "@/lib/tier";
 import type { Board } from "@/lib/types";
 import { LoginRequired } from "./LoginRequired";
 import { GemIcon, Notice, TokenAmount, UserLine } from "./ui";
@@ -15,34 +17,33 @@ import { GemIcon, Notice, TokenAmount, UserLine } from "./ui";
 function AskFormInner({ board }: { board: Board }) {
   const router = useRouter();
   const params = useSearchParams();
-  const { currentUser, createPost, users, state, getUser } = useStore();
+  const { currentUser, createPost, state, getUser, fetchProfile } = useStore();
+  const tierCounts = useTierCounts();
   const base = board === "patient" ? "/qa" : "/clinical";
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [category, setCategory] = useState<Category>(CATEGORIES[0]);
   const [targetTier, setTargetTier] = useState<TierId>("topaz");
-  const [directId, setDirectId] = useState<string | undefined>(() => {
-    const to = params.get("to");
-    return to && getUser(to)?.therapist ? to : undefined;
-  });
+  const [directId, setDirectId] = useState<string | undefined>(() => params.get("to") ?? undefined);
+  // 1:1 대상 치료사 정보가 아직 없으면 불러옴 (서버 모드)
+  useEffect(() => {
+    if (directId && !getUser(directId)) void fetchProfile(directId);
+  }, [directId, getUser, fetchProfile]);
   const [error, setError] = useState<string | null>(null);
+  const [autoLower, setAutoLower] = useState(true);
 
   const direct = directId ? getUser(directId) : undefined;
   const quote = quoteQuestion(state, currentUser, { targetTier, directTherapistId: directId });
   const balance = currentUser ? balanceOf(currentUser) : 0;
 
-  const eligibleCount = (tier: TierId) =>
-    users.filter((u) => {
-      const t = userTier(u);
-      return t && tierRank(t.id) >= tierRank(tier);
-    }).length;
+  const eligibleCount = (tier: TierId) => eligibleFromCounts(tierCounts, tier).toLocaleString();
 
   const [busy, setBusy] = useState(false);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
     setBusy(true);
-    const res = await createPost({ board, title, body, category, targetTier, directTherapistId: directId });
+    const res = await createPost({ board, title, body, category, targetTier, directTherapistId: directId, autoLower });
     setBusy(false);
     if (!res.ok) return setError(res.error);
     router.push(`${base}/${res.id}`);
@@ -160,6 +161,18 @@ function AskFormInner({ board }: { board: Board }) {
               ))}
             </div>
           </>
+        )}
+
+        {!direct && (
+          <label className="mt-5 flex items-start gap-2 rounded-xl border border-brand-100 bg-brand-50/50 p-3.5 text-sm">
+            <input type="checkbox" className="mt-0.5 size-4 accent-brand-600" checked={autoLower} onChange={(e) => setAutoLower(e.target.checked)} />
+            <span>
+              <b>답변이 없으면 자동으로 등급 낮추기</b>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                하루 동안 답변이 없으면 한 단계씩 낮춰 더 많은 치료사가 볼 수 있게 하고, 차액은 바로 돌려드려요.
+              </span>
+            </span>
+          </label>
         )}
 
         <div className="mt-5 flex items-start gap-2 rounded-xl bg-slate-50 p-3.5 text-xs leading-relaxed text-slate-600">

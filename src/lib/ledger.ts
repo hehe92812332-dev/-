@@ -3,12 +3,16 @@
 
 import {
   ADOPT_DEADLINE_DAYS,
+  BALANCE_REFUND_FEE_RATE,
+  LOUNGE_CHANNELS,
   DIRECT_ANSWER_HOURS,
   DIRECT_COST_MULTIPLIER,
   MAX_QUESTION_COST,
   MIN_PURCHASE_TOKENS,
   MEMBERSHIP_PLANS,
   MIN_WITHDRAW_TOKENS,
+  NO_ANSWER_NUDGE_HOURS,
+  TIERS,
   REVOKE_DAYS,
   SETTLEMENT_FEE_RATE,
   SETTLEMENT_HOLD_DAYS,
@@ -76,6 +80,8 @@ const SUSPENDED_ERROR = "신고 처리로 이용이 일시 정지된 계정입�
 export function maskAccount(account: string) {
   return account.replace(/\d(?=(?:\D*\d){4})/g, "*");
 }
+
+export const tierName = (id: TierId) => getTier(id).name;
 
 export function rewardAfterFee(tokens: number) {
   return Math.floor(tokens * (1 - SETTLEMENT_FEE_RATE));
@@ -282,17 +288,49 @@ export function withdraw(s: State, userId: string, tokens: number, bankAccount: 
 /** 관리자: 계좌 이체를 마친 환전 신청을 지급 완료로 표시 */
 export function markWithdrawalPaid(s: State, txId: string): Outcome {
   const tx = s.transactions.find((t) => t.id === txId);
-  if (!tx || tx.type !== "withdraw" || tx.status !== "requested") return fail("처리할 수 없는 환전 신청입니다.");
+  if (!tx || (tx.type !== "withdraw" && tx.type !== "balance_refund") || tx.status !== "requested") return fail("처리할 수 없는 신청입니다.");
   return { ok: true, state: { ...s, transactions: s.transactions.map((t) => (t.id === txId ? { ...t, status: "paid" } : t)) } };
 }
 
 /** 관리자: 환전 신청 반려 — 토큰을 수익 지갑으로 돌려줍니다 */
 export function rejectWithdrawal(s: State, txId: string, reason: string): Outcome {
   const tx = s.transactions.find((t) => t.id === txId);
-  if (!tx || tx.type !== "withdraw" || tx.status !== "requested") return fail("처리할 수 없는 환전 신청입니다.");
+  if (!tx || (tx.type !== "withdraw" && tx.type !== "balance_refund") || tx.status !== "requested") return fail("처리할 수 없는 신청입니다.");
+  const refundOfBalance = tx.type === "balance_refund";
   s = { ...s, transactions: s.transactions.map((t) => (t.id === txId ? { ...t, status: "rejected" } : t)) };
-  s = updateUser(s, tx.userId, (u) => ({ ...u, wallet: addWallet(u.wallet, { earned: -tx.tokens }) }));
-  return { ok: true, state: addTx(s, { userId: tx.userId, type: "withdraw_cancel", tokens: -tx.tokens, memo: `환전 반려: ${reason}` }) };
+  s = updateUser(s, tx.userId, (u) => ({ ...u, wallet: addWallet(u.wallet, refundOfBalance ? { cash: -tx.tokens } : { earned: -tx.tokens }) }));
+  return {
+    ok: true,
+    state: addTx(s, {
+      userId: tx.userId,
+      type: refundOfBalance ? "balance_refund_cancel" : "withdraw_cancel",
+      tokens: -tx.tokens,
+      memo: `${refundOfBalance ? "잔액 환불" : "환전"} 반려: ${reason}`,
+    }),
+  };
+}
+
+/**
+ * 충전 잔액 환불 신청: 청약철회 기간이 지난 미사용 충전 토큰을 수수료를 빼고 돌려받습니다 (관리자 이체).
+ * 1년 시뮬레이션에서 최소 충전 300토큰 때문에 환자 1인당 약 290토큰이 남는 것으로 나와 추가.
+ */
+export function requestBalanceRefund(s: State, userId: string, bankAccount: string): Outcome {
+  const user = s.users.find((u) => u.id === userId);
+  if (!user) return fail("로그인이 필요합니다.");
+  const tokens = user.wallet.cash;
+  if (tokens <= 0) return fail("환불할 충전 토큰이 없습니다. (보너스·수익 토큰은 환불 대상이 아니에요)");
+  if (!bankAccount.trim()) return fail("입금 받을 계좌를 입력해 주세요.");
+  const krw = Math.floor(tokens * TOKEN_KRW * (1 - BALANCE_REFUND_FEE_RATE));
+  s = updateUser(s, userId, (u) => ({ ...u, wallet: addWallet(u.wallet, { cash: -tokens }) }));
+  s = addTx(s, {
+    userId,
+    type: "balance_refund",
+    tokens: -tokens,
+    krw,
+    status: "requested",
+    memo: `충전 잔액 환불 신청 → ${maskAccount(bankAccount)} (수수료 ${Math.round(BALANCE_REFUND_FEE_RATE * 100)}%)`,
+  });
+  return { ok: true, state: s, id: s.transactions[0].id };
 }
 
 // ───────────────────────── 질문·답변 ─────────────────────────
@@ -300,7 +338,7 @@ export function rejectWithdrawal(s: State, txId: string, reason: string): Outcom
 export function createPost(
   s: State,
   userId: string,
-  input: { board: Board; title: string; body: string; category: Category; targetTier: TierId; directTherapistId?: string },
+  input: { board: Board; title: string; body: string; category: Category; targetTier: TierId; directTherapistId?: string; autoLower?: boolean },
 ): Outcome {
   const user = s.users.find((u) => u.id === userId);
   if (!user) return fail("로그인이 필요합니다.");
@@ -327,6 +365,8 @@ export function createPost(
       {
         id,
         ...input,
+        autoLower: !input.directTherapistId && input.autoLower !== false,
+        tierChangedAt: iso(now),
         targetTier: quote.tier.id,
         authorId: userId,
         bounty: quote.total,
@@ -410,6 +450,35 @@ export function cancelPost(s: State, userId: string, postId: string): Outcome {
   return { ok: true, state: refundPost(s, post, "cancelled") };
 }
 
+/** 답변이 없는 질문의 답변 등급을 낮추고 차액을 돌려받습니다 (더 많은 치료사가 볼 수 있게) */
+export function lowerTargetTier(s: State, userId: string, postId: string, newTier: TierId, extendDeadline = true): Outcome {
+  const post = s.posts.find((p) => p.id === postId);
+  if (!post || post.authorId !== userId) return fail("질문자만 바꿀 수 있습니다.");
+  if (post.status !== "open" || post.directTherapistId) return fail("등급을 바꿀 수 없는 질문입니다.");
+  if (post.answers.some((a) => !a.hidden)) return fail("이미 답변이 달린 질문입니다.");
+  if (tierRank(newTier) >= tierRank(post.targetTier)) return fail("지금보다 낮은 등급만 고를 수 있어요.");
+  const newBounty = Math.max(1, Math.round((post.bounty * getTier(newTier).questionCost) / getTier(post.targetTier).questionCost));
+  const refund = post.bounty - newBounty;
+  // 낸 지갑으로 되돌리되, 수익 → 충전 → 보너스 순서 (쓸 때와 반대)
+  const back = { earned: Math.min(refund, post.paidFrom.earned), cash: 0, bonus: 0 };
+  back.cash = Math.min(refund - back.earned, post.paidFrom.cash);
+  back.bonus = refund - back.earned - back.cash;
+  s = updatePost(s, postId, (p) => ({
+    ...p,
+    targetTier: newTier,
+    tierChangedAt: iso(Date.now()),
+    bounty: newBounty,
+    paidFrom: addWallet(p.paidFrom, { cash: -back.cash, bonus: -back.bonus, earned: -back.earned }),
+    // 직접 낮추면 기한을 새로 주고, 자동으로 낮출 때는 원래 기한을 유지
+    expiresAt: extendDeadline ? iso(Date.now() + ADOPT_DEADLINE_DAYS * DAY) : p.expiresAt,
+  }));
+  s = updateUser(s, userId, (u) => ({ ...u, wallet: addWallet(u.wallet, back) }));
+  return {
+    ok: true,
+    state: addTx(s, { userId, type: "lower_tier", tokens: refund, postId, memo: `답변 등급을 ${getTier(newTier).name}(으)로 낮춰 차액 환불` }),
+  };
+}
+
 export function tip(s: State, userId: string, postId: string, answerId: string, amount: number): Outcome {
   const user = s.users.find((u) => u.id === userId);
   const answer = s.posts.find((p) => p.id === postId)?.answers.find((a) => a.id === answerId);
@@ -481,7 +550,7 @@ export function rate(
 
 // ───────────────────────── 등급 라운지 채팅 ─────────────────────────
 
-export function sendChat(s: State, userId: string, body: string, kind: ChatMessage["kind"]): Outcome {
+export function sendChat(s: State, userId: string, body: string, kind: ChatMessage["kind"], channel: string = LOUNGE_CHANNELS[0]): Outcome {
   const user = s.users.find((u) => u.id === userId);
   const tier = user && userTier(user);
   if (!tier) return fail("등급 라운지는 면허 인증된 치료사만 이용할 수 있습니다.");
@@ -490,11 +559,12 @@ export function sendChat(s: State, userId: string, body: string, kind: ChatMessa
   if (text.length > 1000) return fail("메시지는 1000자까지 보낼 수 있습니다.");
   if (isSuspended(user!)) return fail(SUSPENDED_ERROR);
   if (findPersonalInfo(text)) return fail(PII_ERROR);
+  if (!(LOUNGE_CHANNELS as readonly string[]).includes(channel)) return fail("없는 채널입니다.");
   return {
     ok: true,
     state: {
       ...s,
-      chats: [...s.chats, { id: uid("c"), room: tier.id, authorId: userId, body: text, kind, createdAt: iso(Date.now()) }],
+      chats: [...s.chats, { id: uid("c"), room: tier.id, channel, authorId: userId, body: text, kind, createdAt: iso(Date.now()) }],
     },
   };
 }
@@ -597,6 +667,26 @@ export function sweepPosts(s: State, now = Date.now()): State {
   return next;
 }
 
+/**
+ * 자동 등급 낮추기: 답변 없이 하루가 지난 질문을 한 단계 낮추고 차액을 돌려줍니다.
+ * 1년 시뮬레이션에서 치료사의 56%가 원석인데 질문은 중·상위 등급에 몰려, 수동 제안만으로는 무답변 환불이 29%로 남았음.
+ */
+export function autoLowerDue(s: State, now = Date.now()): { state: State; lowered: Post[] } {
+  let next = s;
+  const lowered: Post[] = [];
+  for (const p of s.posts) {
+    if (p.status !== "open" || !p.autoLower || p.directTherapistId || p.targetTier === "rough") continue;
+    if (p.answers.some((a) => !a.hidden)) continue;
+    if (now - new Date(p.tierChangedAt ?? p.createdAt).getTime() < NO_ANSWER_NUDGE_HOURS * HOUR) continue;
+    const r = lowerTargetTier(next, p.authorId, p.id, TIERS[tierRank(p.targetTier) - 1].id, false);
+    if (r.ok) {
+      next = r.state;
+      lowered.push(next.posts.find((x) => x.id === p.id)!);
+    }
+  }
+  return { state: next, lowered };
+}
+
 /** 갱신일이 지난 멤버십 회원 */
 export function dueMemberships(s: State, now = Date.now()) {
   return s.users.filter((u) => u.membership && new Date(u.membership.renewsAt).getTime() <= now);
@@ -629,9 +719,9 @@ export function endMembership(s: State, userId: string): State {
   return updateUser(s, userId, (u) => ({ ...u, membership: undefined }));
 }
 
-/** 데모 모드 전용: 질문 정산 + (결제 없이) 멤버십 갱신·종료 */
+/** 데모 모드 전용: 자동 등급 낮추기 + 질문 정산 + (결제 없이) 멤버십 갱신·종료 */
 export function sweep(s: State, now = Date.now()): State {
-  let next = sweepPosts(s, now);
+  let next = sweepPosts(autoLowerDue(s, now).state, now);
   for (const u of dueMemberships(next, now)) next = u.membership!.autoRenew ? renewMembership(next, u.id) : endMembership(next, u.id);
   return next;
 }

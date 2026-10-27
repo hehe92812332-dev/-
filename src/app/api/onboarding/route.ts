@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { CATEGORIES, DEGREES, HOSPITAL_TYPES } from "@/lib/config";
 import { encrypt } from "@/server/crypto";
+import { putDocument } from "@/server/storage";
 import { db, schema } from "@/server/db";
 import { rateLimit } from "@/server/rate-limit";
 import { HttpError, handle, requireUser } from "@/server/session";
@@ -87,19 +88,27 @@ export const POST = handle(async (req: Request) => {
     submittedAt: new Date().toISOString(),
   };
 
+  // 파일은 트랜잭션 밖에서 먼저 저장 (객체 저장소 업로드가 DB 트랜잭션을 오래 붙잡지 않도록)
+  const stored = await Promise.all(
+    files.map(async ({ kind, file }) => {
+      const id = crypto.randomUUID();
+      return { id, kind, file, ...(await putDocument(user.id, id, file.type, Buffer.from(await file.arrayBuffer()))) };
+    }),
+  );
   await db.transaction(async (tx) => {
     await tx.update(schema.users).set({ name: b.data.name, role: "therapist", ...consent }).where(eq(schema.users.id, user.id));
     if (existing) await tx.update(schema.therapistProfiles).set(profile).where(eq(schema.therapistProfiles.userId, user.id));
     else await tx.insert(schema.therapistProfiles).values({ userId: user.id, ...profile });
-    for (const { kind, file } of files)
+    for (const d of stored)
       await tx.insert(schema.credentialDocuments).values({
-        id: crypto.randomUUID(),
+        id: d.id,
         userId: user.id,
-        kind,
-        filename: file.name.slice(0, 120),
-        mime: file.type,
-        size: file.size,
-        data: Buffer.from(await file.arrayBuffer()),
+        kind: d.kind,
+        filename: d.file.name.slice(0, 120),
+        mime: d.file.type,
+        size: d.file.size,
+        data: d.data,
+        storageKey: d.storageKey,
       });
   });
   return NextResponse.json({ ok: true });

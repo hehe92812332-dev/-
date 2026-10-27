@@ -15,14 +15,25 @@ export const SETTLEMENT_FEE_RATE = 0.15;
 /** 환전 시 원천징수 (사업소득 3.3%) */
 export const WITHHOLDING_TAX_RATE = 0.033;
 
-/** 최소 환전 토큰 수 */
-export const MIN_WITHDRAW_TOKENS = 500;
+/** 최소 환전 토큰 수 — 1년 시뮬레이션에서 500토큰 기준이면 치료사 56%의 수익이 묶여 100으로 낮춤 */
+export const MIN_WITHDRAW_TOKENS = 100;
 
 /** 질문 후 답변 채택 기한(일). 기한 내 채택이 없으면 가장 추천 많은 답변이 자동 채택, 답변이 없으면 전액 환불됩니다. */
 export const ADOPT_DEADLINE_DAYS = 7;
 
-/** 1:1 지정 질문: 지정한 치료사가 이 시간 안에 답변하지 않으면 자동 환불 (숨고의 미열람 견적 환불 방식) */
-export const DIRECT_ANSWER_HOURS = 48;
+/** 1:1 지정 질문: 지정한 치료사가 이 시간 안에 답변하지 않으면 자동 환불 (숨고의 미열람 견적 환불 방식)
+ *  48시간이면 시뮬레이션에서 61%가 무응답 환불돼 72시간 + 알림으로 보완 */
+export const DIRECT_ANSWER_HOURS = 72;
+
+/** 답변이 없는 질문에 '등급 낮추기'를 제안하는 시점 */
+export const NO_ANSWER_NUDGE_HOURS = 24;
+
+/** 충전 잔액 환불 신청 수수료 (청약철회 기간이 지난 미사용 충전 토큰) */
+export const BALANCE_REFUND_FEE_RATE = 0.1;
+
+/** 등급 라운지 채널 — 큰 등급방(원석 등)에서 대화가 한 방에 몰리지 않도록 주제별로 나눔 */
+export const LOUNGE_CHANNELS = ["자유", "근골격계", "신경계", "스포츠·운동", "소아·발달", "노인·심폐", "스터디·자료"] as const;
+export type LoungeChannel = (typeof LOUNGE_CHANNELS)[number];
 
 /** 1:1 지정 질문 비용 = 해당 치료사 등급 질문 비용 × 배수 (JustAnswer식 전문가 지정) */
 export const DIRECT_COST_MULTIPLIER = 1.5;
@@ -57,21 +68,21 @@ export const MEMBERSHIP_PLANS = [
   {
     id: "basic",
     name: "베이직",
-    price: 9_900,
-    monthlyTokens: 99,
-    monthlyBonus: 15,
+    price: 49_000,
+    monthlyTokens: 500,
+    monthlyBonus: 50,
     discountRate: 0.1,
-    perks: ["매월 99토큰 + 보너스 15토큰", "모든 질문 10% 할인", "답변 등록 알림"],
+    perks: ["매월 500토큰 + 보너스 50토큰", "모든 질문 10% 할인", "단건 충전(500토큰 5만 원)보다 저렴"],
   },
   {
     id: "premium",
     name: "프리미엄",
-    price: 29_000,
-    monthlyTokens: 290,
-    monthlyBonus: 70,
+    price: 95_000,
+    monthlyTokens: 1000,
+    monthlyBonus: 150,
     discountRate: 0.2,
     noDirectSurcharge: true,
-    perks: ["매월 290토큰 + 보너스 70토큰", "모든 질문 20% 할인", "1:1 지정 질문 할증 면제"],
+    perks: ["매월 1,000토큰 + 보너스 150토큰", "모든 질문 20% 할인", "1:1 지정 질문 할증 면제"],
     badge: "추천",
   },
 ] as const;

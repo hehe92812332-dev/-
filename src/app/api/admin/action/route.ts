@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import * as ledger from "@/lib/ledger";
 import { db, schema } from "@/server/db";
+import { notify } from "@/server/notify";
 import { runLedger } from "@/server/runner";
 import { HttpError, handle, requireAdmin } from "@/server/session";
 
@@ -27,10 +28,16 @@ export const POST = handle(async (req: Request) => {
   let r;
   switch (a.action) {
     case "verify":
-      r = await runLedger(null, { userIds: [a.userId] }, (s) => ledger.setVerification(s, a.userId, "approved"), log(a.userId));
+      r = await runLedger(null, { userIds: [a.userId] }, (s) => ledger.setVerification(s, a.userId, "approved"), async (tx) => {
+        await log(a.userId)(tx);
+        await notify(tx, a.userId, "verification", "서류 심사가 완료되었어요. 이제 답변·임상 토론·등급 라운지를 이용할 수 있어요.", "/signup/pending");
+      });
       break;
     case "reject":
-      r = await runLedger(null, { userIds: [a.userId] }, (s) => ledger.setVerification(s, a.userId, "rejected", a.reason), log(a.userId, a.reason));
+      r = await runLedger(null, { userIds: [a.userId] }, (s) => ledger.setVerification(s, a.userId, "rejected", a.reason), async (tx) => {
+        await log(a.userId, a.reason)(tx);
+        await notify(tx, a.userId, "verification", `서류 보완이 필요해요: ${a.reason}`, "/signup/pending");
+      });
       break;
     case "resolveReport": {
       const [rp] = await db.select().from(schema.reports).where(eq(schema.reports.id, a.reportId));
@@ -53,13 +60,17 @@ export const POST = handle(async (req: Request) => {
       r = await runLedger(null, { txIds: [a.txId] }, (s) => ledger.markWithdrawalPaid(s, a.txId), async (tx, res) => {
         await tx.update(schema.withdrawalAccounts).set({ processedAt: new Date().toISOString() }).where(eq(schema.withdrawalAccounts.txId, a.txId));
         await log(a.txId)(tx);
-        void res;
+        const t = res.state.transactions.find((x) => x.id === a.txId)!;
+        await notify(tx, t.userId, "payout", `${t.type === "withdraw" ? "환전" : "잔액 환불"} ${t.krw?.toLocaleString()}원을 입금했어요`, "/wallet");
       });
       break;
     case "withdrawReject": {
       const [t] = await db.select({ userId: schema.transactions.userId }).from(schema.transactions).where(eq(schema.transactions.id, a.txId));
       if (!t) throw new HttpError(404, "환전 신청을 찾을 수 없습니다.");
-      r = await runLedger(null, { txIds: [a.txId], userIds: [t.userId] }, (s) => ledger.rejectWithdrawal(s, a.txId, a.reason), log(a.txId, a.reason));
+      r = await runLedger(null, { txIds: [a.txId], userIds: [t.userId] }, (s) => ledger.rejectWithdrawal(s, a.txId, a.reason), async (tx) => {
+        await log(a.txId, a.reason)(tx);
+        await notify(tx, t.userId, "payout", `신청이 반려되어 토큰을 돌려드렸어요: ${a.reason}`, "/wallet");
+      });
       break;
     }
   }

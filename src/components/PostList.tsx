@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, Eye, Lock, MessageSquare, PenSquare, Search } from "lucide-react";
 import { CATEGORIES } from "@/lib/config";
 import { userTier, useStore } from "@/lib/store";
 import type { Board, Post } from "@/lib/types";
-import { useIsBlocked } from "./ReportMenu";
+import { useFeed } from "@/lib/queries";
 import { TierBadge, TokenAmount, timeAgo } from "./ui";
 
 const BOARD_META: Record<Board, { base: string; title: string; desc: string; cta: string }> = {
@@ -61,7 +61,7 @@ export function PostCard({ post }: { post: Post }) {
         <span>{timeAgo(post.createdAt)}</span>
         <span className="inline-flex items-center gap-1">
           <MessageSquare className="size-3.5" />
-          {post.answers.length}
+          {post.answerCount ?? post.answers.length}
         </span>
         <span className="inline-flex items-center gap-1">
           <Eye className="size-3.5" />
@@ -76,29 +76,34 @@ export function PostCard({ post }: { post: Post }) {
 }
 
 export function PostList({ board }: { board: Board }) {
-  const { posts, currentUser } = useStore();
-  const isBlocked = useIsBlocked();
+  const { currentUser } = useStore();
   const meta = BOARD_META[board];
   const [category, setCategory] = useState<string>("전체");
   const [status, setStatus] = useState<"all" | "open" | "adopted">("all");
   const [q, setQ] = useState("");
-
-  const filtered = useMemo(
-    () =>
-      posts.filter(
-        (p) =>
-          p.board === board &&
-          p.status !== "refunded" &&
-          !p.hidden &&
-          !isBlocked(p.authorId) &&
-          (category === "전체" || p.category === category) &&
-          (status === "all" || p.status === status) &&
-          (!q || p.title.includes(q) || p.body.includes(q)),
-      ),
-    [posts, board, category, status, q, isBlocked],
-  );
-
+  const [query, setQuery] = useState("");
+  const [forMe, setForMe] = useState(false);
   const locked = board === "clinical" && !(currentUser && userTier(currentUser));
+  const canAnswer = !!currentUser && !!userTier(currentUser) && board === "patient";
+
+  // 입력이 멈춘 뒤 검색 (매 글자마다 서버 요청하지 않도록)
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(q.trim()), 300);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  const feed = useFeed(
+    locked
+      ? null
+      : forMe
+        ? { board, forMe: true }
+        : {
+            board,
+            category: category === "전체" ? undefined : category,
+            status: status === "all" ? undefined : status,
+            q: query.length >= 2 ? query : undefined,
+          },
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:py-12">
@@ -134,7 +139,22 @@ export function PostList({ board }: { board: Board }) {
         </div>
       ) : (
         <>
-          <div className="mt-8 flex flex-col gap-3">
+          {canAnswer && (
+            <div className="mt-8 inline-flex rounded-xl bg-slate-100 p-1 text-sm font-semibold">
+              <button onClick={() => setForMe(false)} className={`rounded-lg px-4 py-2 ${!forMe ? "bg-white shadow-sm" : "text-slate-500"}`}>
+                전체 질문
+              </button>
+              <button onClick={() => setForMe(true)} className={`rounded-lg px-4 py-2 ${forMe ? "bg-white shadow-sm" : "text-slate-500"}`}>
+                내가 답변할 수 있는 질문
+              </button>
+            </div>
+          )}
+          {forMe && (
+            <p className="mt-3 text-sm text-slate-500">
+              나에게 온 1:1 질문, 아직 답변이 없는 질문, 답변할 수 있는 치료사가 적은 질문 순서로 보여드려요.
+            </p>
+          )}
+          <div className={`mt-6 flex flex-col gap-3 ${forMe ? "hidden" : ""}`}>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
               <input className="input !pl-10" placeholder="증상, 질환명, 키워드로 검색" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -171,14 +191,26 @@ export function PostList({ board }: { board: Board }) {
             </div>
           </div>
 
+          {feed.error && <p className="mt-6 text-sm text-rose-600">{feed.error}</p>}
+          {q.trim().length === 1 && <p className="mt-3 text-xs text-slate-400">두 글자 이상 입력하면 검색해요.</p>}
           <div className="mt-6 grid gap-4 md:grid-cols-2">
-            {filtered.map((p) => (
+            {feed.posts.map((p) => (
               <PostCard key={p.id} post={p} />
             ))}
-            {filtered.length === 0 && (
-              <div className="card col-span-full py-16 text-center text-sm text-slate-500">조건에 맞는 글이 없습니다.</div>
+            {!feed.loading && feed.posts.length === 0 && (
+              <div className="card col-span-full py-16 text-center text-sm text-slate-500">
+                {forMe ? "지금 답변할 수 있는 질문이 없어요." : "조건에 맞는 글이 없습니다."}
+              </div>
             )}
           </div>
+          {feed.loading && <p className="mt-6 text-center text-sm text-slate-400">불러오는 중…</p>}
+          {feed.hasMore && !feed.loading && (
+            <div className="mt-6 text-center">
+              <button onClick={feed.loadMore} className="btn-ghost">
+                더 보기
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

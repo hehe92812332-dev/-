@@ -1,6 +1,8 @@
 import "server-only";
-import { and, eq, isNotNull, lte } from "drizzle-orm";
-import { MEMBERSHIP_PLANS, TOKEN_PACKAGES, type MembershipPlanId, type PaymentMethodId } from "@/lib/config";
+import { and, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
+import { MEMBERSHIP_PLANS, NO_ANSWER_NUDGE_HOURS, TOKEN_PACKAGES, type MembershipPlanId, type PaymentMethodId } from "@/lib/config";
+import { notify } from "./notify";
+import { revealExpired } from "./stats";
 import * as ledger from "@/lib/ledger";
 import { decrypt, encrypt } from "./crypto";
 import { db, schema } from "./db";
@@ -230,9 +232,81 @@ export async function runScheduledJobs() {
     .limit(500);
   let settled = 0;
   for (const { id } of expired) {
-    const r = await runLedger(null, { postIds: [id] }, (s) => ({ ok: true, state: ledger.sweepPosts(s) }));
+    const r = await runLedger(
+      null,
+      { postIds: [id] },
+      (s) => ({ ok: true, state: ledger.sweepPosts(s) }),
+      async (tx, res) => {
+        const p = res.state.posts[0];
+        if (!p || p.status === "open") return;
+        const link = `/${p.board === "patient" ? "qa" : "clinical"}/${p.id}`;
+        if (p.status === "refunded") await notify(tx, p.authorId, "closed", `답변이 없어 질문 토큰 ${p.bounty}개를 돌려드렸어요`, link);
+        else {
+          await notify(tx, p.authorId, "closed", "채택 기한이 지나 추천이 가장 많은 답변이 자동 채택되었어요", link);
+          const winner = p.answers.find((a) => a.id === p.adoptedAnswerId);
+          if (winner) await notify(tx, winner.authorId, "adopted", `답변이 자동 채택되어 ${ledger.rewardAfterFee(p.bounty)}토큰을 받았어요`, link);
+        }
+      },
+    );
     if (r.ok) settled++;
   }
+
+  // 자동 등급 낮추기를 켠 질문: 하루 동안 답변이 없으면 한 단계 낮추고 차액 환불
+  const lowerBefore = new Date(Date.now() - NO_ANSWER_NUDGE_HOURS * 3600_000).toISOString();
+  const lowerable = await db
+    .select({ id: schema.posts.id })
+    .from(schema.posts)
+    .where(
+      and(
+        eq(schema.posts.status, "open"),
+        eq(schema.posts.autoLower, true),
+        eq(schema.posts.answerCount, 0),
+        isNull(schema.posts.directTherapistId),
+        sql`${schema.posts.targetTier} <> 'rough'`,
+        lte(schema.posts.tierChangedAt, lowerBefore),
+      ),
+    )
+    .limit(1000);
+  let lowered = 0;
+  for (const { id } of lowerable) {
+    const r = await runLedger(
+      null,
+      { postIds: [id] },
+      (s) => ({ ok: true, state: ledger.autoLowerDue(s).state }),
+      async (tx, res) => {
+        const p = res.state.posts[0];
+        if (p && p.tierChangedAt && Date.now() - new Date(p.tierChangedAt).getTime() < 60_000) {
+          lowered++;
+          await notify(tx, p.authorId, "no_answer", `답변이 없어 ${ledger.tierName(p.targetTier)} 등급 이상으로 넓히고 차액을 돌려드렸어요`, `/qa/${p.id}`);
+        }
+      },
+    );
+    void r;
+  }
+
+  // 자동 낮추기를 끈 질문: 하루 동안 답변이 없으면 낮추기 제안 (질문당 한 번)
+  const nudgeBefore = new Date(Date.now() - NO_ANSWER_NUDGE_HOURS * 3600_000).toISOString();
+  const quiet = await db
+    .select({ id: schema.posts.id, authorId: schema.posts.authorId, targetTier: schema.posts.targetTier })
+    .from(schema.posts)
+    .where(
+      and(
+        eq(schema.posts.board, "patient"),
+        eq(schema.posts.status, "open"),
+        eq(schema.posts.answerCount, 0),
+        isNull(schema.posts.directTherapistId),
+        eq(schema.posts.autoLower, false),
+        lte(schema.posts.createdAt, nudgeBefore),
+        sql`not exists (select 1 from ${schema.notifications} n where n.user_id = ${schema.posts.authorId} and n.type = 'no_answer' and n.link = '/qa/' || ${schema.posts.id})`,
+      ),
+    )
+    .limit(1000);
+  for (const q of quiet)
+    if (q.targetTier !== "rough")
+      await db.transaction((tx) => notify(tx, q.authorId, "no_answer", "하루 동안 답변이 없어요. 답변 등급을 낮추면 더 많은 치료사가 볼 수 있고 차액도 돌려받아요.", `/qa/${q.id}`));
+
+  // 블라인드 기간이 지난 평가를 온도에 반영
+  const revealed = await db.transaction((tx) => revealExpired(tx));
 
   // 2) 멤버십: 자동 갱신이면 결제 후 지급, 해지했거나 결제 실패면 종료
   const due = await db
@@ -250,5 +324,5 @@ export async function runScheduledJobs() {
       ended++;
     }
   }
-  return { settled, renewed, ended };
+  return { settled, lowered, nudged: quiet.length, revealed, renewed, ended };
 }

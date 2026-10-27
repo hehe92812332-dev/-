@@ -1,6 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db, schema } from "@/server/db";
+import { deleteDocument } from "@/server/storage";
 import { HttpError, handle, requireUser } from "@/server/session";
 
 /**
@@ -21,6 +22,9 @@ export const POST = handle(async () => {
   if (pendingWithdraw.length) throw new HttpError(400, "처리 중인 환전 신청이 있어요. 입금이 끝난 뒤 탈퇴해 주세요.");
 
   const now = new Date().toISOString();
+  // 객체 저장소에 있는 서류 파일도 삭제
+  const docs = await db.select({ storageKey: schema.credentialDocuments.storageKey }).from(schema.credentialDocuments).where(eq(schema.credentialDocuments.userId, user.id));
+  await Promise.all(docs.map(deleteDocument));
   await db.transaction(async (tx) => {
     const remaining = user.cash + user.bonus + user.earned;
     if (remaining > 0)

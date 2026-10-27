@@ -5,7 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Lock, Megaphone, Send, Users } from "lucide-react";
 import { ReportMenu } from "@/components/ReportMenu";
 import { Avatar, GemIcon, Notice, TempChip } from "@/components/ui";
-import { TIERS } from "@/lib/config";
+import { LOUNGE_CHANNELS, TIERS } from "@/lib/config";
+import { useTherapists, useTierCounts } from "@/lib/queries";
 import { userTier, useStore } from "@/lib/store";
 import { gradeLabel } from "@/lib/tier";
 
@@ -17,28 +18,54 @@ function clock(iso: string) {
 }
 
 export default function LoungePage() {
-  const { currentUser, users, chats, getUser, sendChat, pollChats, blocks } = useStore();
+  const { currentUser, chats, getUser, sendChat, loadChannel, pollChannel, blocks } = useStore();
   const [sending, setSending] = useState(false);
+  const [channel, setChannel] = useState<string>(LOUNGE_CHANNELS[0]);
+  const [hasMore, setHasMore] = useState(false);
+  const [lastAt, setLastAt] = useState<Record<string, string>>({});
+  const [seenAt, setSeenAt] = useState<Record<string, string>>({});
   const [draft, setDraft] = useState("");
   const [asStudy, setAsStudy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const tier = currentUser ? userTier(currentUser) : undefined;
-  const messages = useMemo(() => (tier ? chats.filter((c) => c.room === tier.id) : []), [chats, tier]);
-  const members = tier ? users.filter((u) => userTier(u)?.id === tier.id) : [];
+  const messages = useMemo(
+    () => (tier ? chats.filter((c) => c.room === tier.id && (c.channel ?? LOUNGE_CHANNELS[0]) === channel) : []),
+    [chats, tier, channel],
+  );
+  // 멤버는 많을 수 있어 온도 높은 순 상위 30명만 표시하고, 전체 인원은 통계로
+  const memberList = useTherapists(tier ? { tier: tier.id, sort: "temp", limit: 30 } : null);
+  const members = memberList.users;
+  const memberCount = useTierCounts()[tier?.id ?? ""] ?? members.length;
   const blockedIds = new Set(blocks.filter((b) => b.userId === currentUser?.id).map((b) => b.blockedId));
   const study = [...messages].reverse().find((m) => m.kind === "study" && !blockedIds.has(m.authorId));
 
+  const lastMessageAt = messages.length ? messages[messages.length - 1].createdAt : "";
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [messages.length]);
+  }, [lastMessageAt]);
 
-  // 서버 모드: 3초마다 새 메시지 확인 (화면이 보일 때만)
+  // 채널을 열면 최신 50개를 불러오고, 다른 채널의 새 글 표시를 위해 마지막 시각을 기억
   useEffect(() => {
-    const timer = setInterval(() => document.visibilityState === "visible" && pollChats(), 3000);
+    if (!tier) return;
+    loadChannel(channel).then((r) => {
+      setHasMore(r.hasMore);
+      setLastAt(r.channels);
+    });
+    setSeenAt((s) => ({ ...s, [channel]: new Date().toISOString() }));
+  }, [channel, tier, loadChannel]);
+
+  // 서버 모드: 화면이 보일 때 3초마다(안 보이면 멈춤) 새 메시지 확인
+  useEffect(() => {
+    const timer = setInterval(async () => {
+      if (document.visibilityState !== "visible") return;
+      const last = await pollChannel(channel);
+      if (Object.keys(last).length) setLastAt(last);
+      setSeenAt((s) => ({ ...s, [channel]: new Date().toISOString() }));
+    }, 3000);
     return () => clearInterval(timer);
-  }, [pollChats]);
+  }, [channel, pollChannel]);
 
   if (!currentUser || !tier)
     return (
@@ -65,7 +92,7 @@ export default function LoungePage() {
   const send = async () => {
     if (sending) return;
     setSending(true);
-    const r = await sendChat(draft, asStudy ? "study" : "text");
+    const r = await sendChat(draft, asStudy ? "study" : "text", channel);
     setSending(false);
     if (!r.ok) return setError(r.error);
     setDraft("");
@@ -88,8 +115,9 @@ export default function LoungePage() {
 
         <div className="card p-4">
           <div className="flex items-center gap-1.5 text-sm font-bold">
-            <Users className="size-4" /> 멤버 {members.length}
+            <Users className="size-4" /> 멤버 {memberCount.toLocaleString()}
           </div>
+          {memberCount > members.length && <p className="mt-1 text-[11px] text-slate-400">만족도 온도 높은 순 {members.length}명</p>}
           <ul className="mt-3 space-y-2.5">
             {members.map((m) => (
               <li key={m.id}>
@@ -130,10 +158,25 @@ export default function LoungePage() {
               {tier.name} 라운지
             </div>
             <div className="truncate text-xs text-slate-500">
-              {gradeLabel(tier)} 치료사 {members.length}명 · {members.map((m) => m.name).join(", ")}
+              {gradeLabel(tier)} 치료사 {memberCount.toLocaleString()}명 · # {channel}
             </div>
           </div>
         </header>
+        <nav className="flex gap-1.5 overflow-x-auto border-b border-slate-100 px-3 py-2 [scrollbar-width:none]">
+          {LOUNGE_CHANNELS.map((c) => {
+            const fresh = c !== channel && lastAt[c] && (!seenAt[c] || lastAt[c] > seenAt[c]);
+            return (
+              <button
+                key={c}
+                onClick={() => setChannel(c)}
+                className={`relative shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${c === channel ? "bg-ink text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+              >
+                # {c}
+                {fresh && <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-rose-500" aria-label="새 메시지" />}
+              </button>
+            );
+          })}
+        </nav>
 
         {study && (
           <div className="flex items-start gap-2 border-b border-amber-100 bg-amber-50 px-4 py-2.5 text-sm">
@@ -146,6 +189,19 @@ export default function LoungePage() {
         )}
 
         <div className="flex-1 space-y-3 overflow-y-auto bg-slate-50/60 px-4 py-4">
+          {hasMore && (
+            <div className="text-center">
+              <button
+                onClick={async () => {
+                  const r = await loadChannel(channel, messages[0]?.createdAt);
+                  setHasMore(r.hasMore);
+                }}
+                className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50"
+              >
+                이전 대화 더 보기
+              </button>
+            </div>
+          )}
           {messages.length === 0 && (
             <div className="py-16 text-center text-sm text-slate-500">
               아직 대화가 없어요. 첫 메시지로 스터디 주제를 제안해 보세요!

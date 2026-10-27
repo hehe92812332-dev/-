@@ -1,9 +1,10 @@
 import "server-only";
-import { and, eq, gte, inArray, or } from "drizzle-orm";
+import { and, eq, gte, inArray, or, sql } from "drizzle-orm";
 import { SETTLEMENT_HOLD_DAYS, REVOKE_DAYS } from "@/lib/config";
 import type { Outcome, State } from "@/lib/ledger";
 import { db, schema, type Tx } from "./db";
 import { fromPost, fromTx, toAnswer, toBlock, toChat, toPost, toRating, toReport, toTx, toUser } from "./mappers";
+import { revealMutual, tierColumns } from "./stats";
 
 /** 액션 하나가 읽어야 하는 데이터 범위 */
 export interface Slice {
@@ -24,7 +25,10 @@ export interface Slice {
 const uniq = (xs: (string | null | undefined)[]) => [...new Set(xs.filter((x): x is string => !!x))];
 
 export async function loadState(tx: Tx, slice: Slice, currentUserId: string | null): Promise<State> {
-  const postRows = slice.postIds?.length ? await tx.select().from(schema.posts).where(inArray(schema.posts.id, slice.postIds)) : [];
+  // 잠금 순서를 항상 같게(질문 → 회원 → 거래·신고, 각각 id 순) 해서 교착을 피합니다
+  const postRows = slice.postIds?.length
+    ? await tx.select().from(schema.posts).where(inArray(schema.posts.id, slice.postIds)).orderBy(schema.posts.id).for("update")
+    : [];
   const answerRows = postRows.length
     ? await tx.select().from(schema.answers).where(inArray(schema.answers.postId, postRows.map((p) => p.id)))
     : [];
@@ -52,7 +56,9 @@ export async function loadState(tx: Tx, slice: Slice, currentUserId: string | nu
     ...chatRows.map((c) => c.authorId),
   ]);
   // 지갑 행을 잠가 동시에 들어온 결제·차감이 서로를 덮어쓰지 않게 합니다
-  const userRows = userIds.length ? await tx.select().from(schema.users).where(inArray(schema.users.id, userIds)).for("update") : [];
+  const userRows = userIds.length
+    ? await tx.select().from(schema.users).where(inArray(schema.users.id, userIds)).orderBy(schema.users.id).for("update")
+    : [];
   const profiles = userIds.length
     ? await tx.select().from(schema.therapistProfiles).where(inArray(schema.therapistProfiles.userId, userIds))
     : [];
@@ -61,7 +67,12 @@ export async function loadState(tx: Tx, slice: Slice, currentUserId: string | nu
   const txConds = [];
   if (slice.recentTxOf?.length) txConds.push(and(inArray(schema.transactions.userId, slice.recentTxOf), gte(schema.transactions.createdAt, since)));
   if (slice.txIds?.length) txConds.push(inArray(schema.transactions.id, slice.txIds));
+  // 특정 거래(환전 처리·결제 취소)는 잠가서 두 번 처리되지 않게
+  const lockedTx = slice.txIds?.length
+    ? await tx.select().from(schema.transactions).where(inArray(schema.transactions.id, slice.txIds)).orderBy(schema.transactions.id).for("update")
+    : [];
   const txRows = txConds.length ? await tx.select().from(schema.transactions).where(or(...txConds)) : [];
+  for (const t of lockedTx) if (!txRows.some((x) => x.id === t.id)) txRows.push(t);
 
   const ratingRows = slice.ratingsOfPosts?.length
     ? await tx.select().from(schema.ratings).where(inArray(schema.ratings.postId, slice.ratingsOfPosts))
@@ -69,7 +80,7 @@ export async function loadState(tx: Tx, slice: Slice, currentUserId: string | nu
   const reportConds = [];
   if (slice.reportIds?.length) reportConds.push(inArray(schema.reports.id, slice.reportIds));
   if (slice.reportsBy) reportConds.push(and(eq(schema.reports.reporterId, slice.reportsBy), eq(schema.reports.status, "open")));
-  const reportRows = reportConds.length ? await tx.select().from(schema.reports).where(or(...reportConds)) : [];
+  const reportRows = reportConds.length ? await tx.select().from(schema.reports).where(or(...reportConds)).orderBy(schema.reports.id).for("update") : [];
   // 같은 대상의 열린 신고도 함께 처리되도록 포함
   const sameTarget = reportRows.length
     ? await tx
@@ -114,9 +125,16 @@ export async function persistDiff(tx: Tx, before: State, after: State) {
         .where(eq(schema.users.id, u.id));
     }
     if (u.therapist && !same([prev.therapist?.verification, prev.therapist?.rejectReason], [u.therapist.verification, u.therapist.rejectReason])) {
+      const approved = u.therapist.verification === "approved";
       await tx
         .update(schema.therapistProfiles)
-        .set({ verification: u.therapist.verification ?? "pending", rejectReason: u.therapist.rejectReason ?? null, reviewedAt: new Date().toISOString() })
+        .set({
+          verification: u.therapist.verification ?? "pending",
+          rejectReason: u.therapist.rejectReason ?? null,
+          reviewedAt: new Date().toISOString(),
+          // 승인 시 등급을 계산해 두어 목록에서 바로 정렬·필터
+          ...(approved ? tierColumns(u.therapist) : { tier: null, tierRank: null }),
+        })
         .where(eq(schema.therapistProfiles.userId, u.id));
     }
   }
@@ -124,10 +142,12 @@ export async function persistDiff(tx: Tx, before: State, after: State) {
   for (const p of after.posts) {
     const prev = before.posts.find((x) => x.id === p.id);
     const { answers, ...row } = p;
-    if (!prev) await tx.insert(schema.posts).values(fromPost(p));
-    else if (!same({ ...prev, answers: [] }, { ...row, answers: [] })) {
+    const answerCount = answers.filter((a) => !a.hidden).length;
+    const prevCount = prev?.answers.filter((a) => !a.hidden).length;
+    if (!prev) await tx.insert(schema.posts).values({ ...fromPost(p), answerCount });
+    else if (!same({ ...prev, answers: [] }, { ...row, answers: [] }) || prevCount !== answerCount) {
       const { id: _id, ...set } = fromPost(p);
-      await tx.update(schema.posts).set(set).where(eq(schema.posts.id, p.id));
+      await tx.update(schema.posts).set({ ...set, answerCount }).where(eq(schema.posts.id, p.id));
     }
     for (const a of answers) {
       const pa = prev?.answers.find((x) => x.id === a.id);
@@ -140,18 +160,23 @@ export async function persistDiff(tx: Tx, before: State, after: State) {
 
   for (const t of after.transactions) {
     const prev = before.transactions.find((x) => x.id === t.id);
-    if (!prev) await tx.insert(schema.transactions).values(fromTx(t));
+    if (!prev) {
+      await tx.insert(schema.transactions).values(fromTx(t));
+      // 채택 보상이 생기면 채택 답변 수 증가
+      if (t.type === "reward") await tx.update(schema.users).set({ adoptedCount: sql`${schema.users.adoptedCount} + 1` }).where(eq(schema.users.id, t.userId));
+    }
     else if (!!prev.revoked !== !!t.revoked || prev.status !== t.status)
       await tx.update(schema.transactions).set({ revoked: !!t.revoked, status: t.status ?? null }).where(eq(schema.transactions.id, t.id));
   }
 
-  for (const r of after.ratings)
-    if (!before.ratings.some((x) => x.id === r.id))
-      await tx.insert(schema.ratings).values({ ...r, answerId: r.answerId ?? null });
+  const newRatings = after.ratings.filter((r) => !before.ratings.some((x) => x.id === r.id));
+  for (const { revealed: _revealed, ...r } of newRatings) await tx.insert(schema.ratings).values({ ...r, answerId: r.answerId ?? null });
+  // 서로 평가했다면 즉시 공개해 온도에 반영
+  await revealMutual(tx, newRatings.map((r) => r.id));
 
   for (const c of after.chats) {
     const prev = before.chats.find((x) => x.id === c.id);
-    if (!prev) await tx.insert(schema.chatMessages).values({ ...c, hidden: !!c.hidden });
+    if (!prev) await tx.insert(schema.chatMessages).values({ ...c, channel: c.channel ?? "자유", hidden: !!c.hidden });
     else if (!!prev.hidden !== !!c.hidden) await tx.update(schema.chatMessages).set({ hidden: !!c.hidden }).where(eq(schema.chatMessages.id, c.id));
   }
 
@@ -173,7 +198,9 @@ export type RunResult = { ok: true; id?: string; state: State } | { ok: false; e
 
 /**
  * 원장 규칙(ledger.ts)을 DB 트랜잭션 안에서 실행합니다.
- * SERIALIZABLE 격리 + 지갑 행 잠금으로 동시 요청에도 잔액이 어긋나지 않으며, 직렬화 충돌 시 재시도합니다.
+ * 바꿀 행(질문·회원 지갑·거래·신고)을 먼저 FOR UPDATE로 잠그고 읽으므로, 같은 행을 건드리는 요청은 줄을 서서 차례로 처리됩니다.
+ * (100만 명 동시 쓰기 테스트에서 SERIALIZABLE 방식은 같은 질문에 50명이 동시에 답하면 충돌 재시도가 바닥나 실패했음)
+ * 교착(40P01)·직렬화 실패(40001)는 재시도합니다.
  * after 콜백은 같은 트랜잭션 안에서 부가 기록(주문 상태, 계좌 등)을 남길 때 씁니다.
  */
 export async function runLedger(
@@ -193,12 +220,12 @@ export async function runLedger(
           if (after) await after(tx, { state: out.state, id: out.id });
           return { ok: true as const, id: out.id, state: out.state };
         },
-        { isolationLevel: "serializable" },
+        { isolationLevel: "read committed" },
       );
     } catch (e) {
       const code = (e as { code?: string; cause?: { code?: string } }).code ?? (e as { cause?: { code?: string } }).cause?.code;
-      if ((code === "40001" || code === "40P01") && attempt < 4) {
-        await new Promise((r) => setTimeout(r, 20 * 2 ** attempt + Math.random() * 20));
+      if ((code === "40001" || code === "40P01") && attempt < 8) {
+        await new Promise((r) => setTimeout(r, 20 * 2 ** Math.min(attempt, 5) + Math.random() * 50));
         continue;
       }
       throw e;

@@ -51,6 +51,15 @@ export interface User {
   isAdmin?: boolean;
   /** 이용 정지 종료 시각 (신고 처리 결과) */
   suspendedUntil?: string;
+  /** 서버가 미리 계산해 내려주는 값 (서버 모드). 없으면 화면에서 평가 목록으로 계산 */
+  stats?: UserStats;
+}
+
+export interface UserStats {
+  temperature: number;
+  ratingCount: number;
+  adoptedCount: number;
+  topTag?: [string, number];
 }
 
 /** clinical: 치료사 전용 임상 토론, patient: 환자 Q&A */
@@ -79,6 +88,10 @@ export interface Post {
   targetTier: TierId;
   /** 1:1 지정 질문이면 지정된 치료사 id. 이 치료사만 답변할 수 있습니다. */
   directTherapistId?: string;
+  /** 답변이 없으면 하루마다 한 단계씩 등급을 낮추고 차액 환불 (기본 켜짐) */
+  autoLower?: boolean;
+  /** 마지막으로 등급이 정해진 시각 (작성 또는 낮춤) */
+  tierChangedAt?: string;
   /** 질문자가 걸어 둔 토큰 (에스크로). 현상금 추가 시 늘어납니다. */
   bounty: number;
   /** 에스크로 토큰이 어느 지갑에서 나왔는지 — 환불 시 같은 곳으로 돌려줍니다. */
@@ -92,6 +105,8 @@ export interface Post {
   expiresAt: string;
   views: number;
   answers: Answer[];
+  /** 목록 조회 시 답변 본문 없이 개수만 받을 때 */
+  answerCount?: number;
   hidden?: boolean;
 }
 
@@ -106,7 +121,10 @@ export type TxType =
   | "tip_sent"
   | "tip_received"
   | "withdraw"
-  | "withdraw_cancel";
+  | "withdraw_cancel"
+  | "balance_refund"
+  | "balance_refund_cancel"
+  | "lower_tier";
 
 export interface Transaction {
   id: string;
@@ -152,6 +170,8 @@ export interface ChatMessage {
   authorId: string;
   body: string;
   kind: "text" | "study";
+  /** 라운지 채널 (LOUNGE_CHANNELS) */
+  channel?: string;
   createdAt: string;
   hidden?: boolean;
 }

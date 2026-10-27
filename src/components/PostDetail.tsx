@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Award, CheckCircle2, Clock, Eye, Gift, Heart, Lock, Plus, UserRoundCheck } from "lucide-react";
-import { BOUNTY_ADD_OPTIONS, TIP_OPTIONS } from "@/lib/config";
+import { BOUNTY_ADD_OPTIONS, NO_ANSWER_NUDGE_HOURS, TIERS, TIP_OPTIONS } from "@/lib/config";
+import { eligibleFromCounts } from "@/lib/local-queries";
+import { usePost, useTierCounts } from "@/lib/queries";
 import { canRateAnswer, canRateAsker, rewardAfterFee } from "@/lib/ledger";
 import { RatingForm } from "./RatingForm";
 import { ReportMenu, useIsBlocked } from "./ReportMenu";
@@ -20,8 +22,11 @@ function timeLeft(iso: string) {
 
 export function PostDetail({ id }: { id: string }) {
   const store = useStore();
-  const { posts, getUser, currentUser, viewPost, state, me } = store;
-  const post = posts.find((p) => p.id === id);
+  const { getUser, currentUser, viewPost, state, me } = store;
+  const { post, loading, error } = usePost(id);
+  const tierCounts = useTierCounts();
+  const [showLower, setShowLower] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState("");
   const [msg, setMsg] = useState<{ tone: "error" | "success"; text: string } | null>(null);
   const [tipFor, setTipFor] = useState<string | null>(null);
@@ -34,7 +39,8 @@ export function PostDetail({ id }: { id: string }) {
     viewPost(id);
   }, [id, viewPost]);
 
-  if (!post) return <div className="mx-auto max-w-3xl px-4 py-16 text-center text-slate-500">글을 찾을 수 없습니다.</div>;
+  if (!post && loading) return <div className="mx-auto max-w-3xl px-4 py-16 text-center text-slate-400">불러오는 중…</div>;
+  if (!post) return <div className="mx-auto max-w-3xl px-4 py-16 text-center text-slate-500">{error ?? "글을 찾을 수 없습니다."}</div>;
 
   const base = post.board === "patient" ? "/qa" : "/clinical";
   if (post.board === "clinical" && !(currentUser && userTier(currentUser)) && !me?.isAdmin)
@@ -46,7 +52,11 @@ export function PostDetail({ id }: { id: string }) {
       </div>
     );
 
-  const author = getUser(post.authorId)!;
+  const author = getUser(post.authorId);
+  if (!author) return <div className="mx-auto max-w-3xl px-4 py-16 text-center text-slate-400">불러오는 중…</div>;
+  // 답변 없는 질문: 등급을 낮추면 볼 수 있는 치료사가 늘어남
+  const canLower = currentUser?.id === post.authorId && post.status === "open" && !post.directTherapistId && post.answers.length === 0 && post.targetTier !== "rough";
+  const quietForADay = Date.now() - new Date(post.createdAt).getTime() > NO_ANSWER_NUDGE_HOURS * 3600_000;
   const direct = post.directTherapistId ? getUser(post.directTherapistId) : undefined;
   const isOwner = currentUser?.id === post.authorId;
   const reward = rewardAfterFee(post.bounty);
@@ -61,7 +71,6 @@ export function PostDetail({ id }: { id: string }) {
     a.id === post.adoptedAnswerId ? -1 : b.id === post.adoptedAnswerId ? 1 : b.likes.length - a.likes.length,
   );
 
-  const [busy, setBusy] = useState(false);
   /** 요청을 보내고 결과 메시지를 띄웁니다. 처리 중 중복 클릭은 무시합니다. */
   const show = async (p: Promise<Result>, success: string): Promise<Result> => {
     if (busy) return { ok: false, error: "처리 중이에요." };
@@ -149,6 +158,35 @@ export function PostDetail({ id }: { id: string }) {
                 ))}
               </div>
             </div>
+          )}
+          {canLower && (quietForADay || showLower) && (
+            <div className="mt-3 border-t border-amber-200/60 pt-3">
+              <p className="text-xs font-semibold text-slate-700">
+                {quietForADay ? "하루 동안 답변이 없어요. " : ""}답변 등급을 낮추면 더 많은 치료사가 볼 수 있고 차액은 돌려드려요.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {TIERS.slice(0, tierRank(post.targetTier))
+                  .reverse()
+                  .slice(0, 4)
+                  .map((t) => {
+                    const newBounty = Math.max(1, Math.round((post.bounty * t.questionCost) / getTier(post.targetTier).questionCost));
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => show(store.lowerTier(post.id, t.id), `${t.name} 등급으로 바꾸고 ${post.bounty - newBounty}토큰을 돌려드렸어요.`)}
+                        className="rounded-lg bg-white px-3 py-1.5 text-left text-xs ring-1 ring-amber-200 hover:bg-amber-100"
+                      >
+                        <b style={{ color: t.text }}>{t.name}</b> 이상 · {eligibleFromCounts(tierCounts, t.id).toLocaleString()}명 볼 수 있음 · {post.bounty - newBounty}토큰 환불
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+          {canLower && !quietForADay && !showLower && (
+            <button onClick={() => setShowLower(true)} className="mt-2 text-xs font-semibold text-slate-500 underline">
+              답변 등급 낮추기
+            </button>
           )}
           {post.status === "refunded" && (
             <p className="mt-2 text-xs text-slate-500">

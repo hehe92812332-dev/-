@@ -8,6 +8,7 @@ import { Checkout, type CheckoutItem } from "@/components/Checkout";
 import { LoginRequired } from "@/components/LoginRequired";
 import { Notice, TokenAmount, timeAgo } from "@/components/ui";
 import {
+  BALANCE_REFUND_FEE_RATE,
   MEMBERSHIP_PLANS,
   MIN_PURCHASE_TOKENS,
   MIN_WITHDRAW_TOKENS,
@@ -35,6 +36,9 @@ const TX_LABEL: Record<TxType, string> = {
   tip_received: "팁 받음",
   withdraw: "현금 환전",
   withdraw_cancel: "환전 반려",
+  balance_refund: "잔액 환불 신청",
+  balance_refund_cancel: "잔액 환불 반려",
+  lower_tier: "등급 변경 차액",
 };
 
 type Tab = "buy" | "membership" | "withdraw";
@@ -47,6 +51,7 @@ function WalletInner() {
   const [pkg, setPkg] = useState<string>(TOKEN_PACKAGES[0].id);
   const [amount, setAmount] = useState(MIN_WITHDRAW_TOKENS);
   const [account, setAccount] = useState("");
+  const [refundAccount, setRefundAccount] = useState("");
   const [msg, setMsg] = useState<{ tone: "error" | "success"; text: string } | null>(null);
   const [checkout, setCheckout] = useState<{ item: CheckoutItem; pay: (m: PaymentMethodId) => Promise<Result> } | null>(null);
 
@@ -151,7 +156,7 @@ function WalletInner() {
             [
               ["buy", "토큰 충전"],
               ["membership", "멤버십"],
-              ["withdraw", "현금 환전"],
+              ["withdraw", "환전·환불"],
             ] as const
           ).map(([k, label]) => (
             <button key={k} onClick={() => switchTab(k)} className={`rounded-lg px-4 py-2 ${tab === k ? "bg-white shadow-sm" : "text-slate-500"}`}>
@@ -305,12 +310,33 @@ function WalletInner() {
             </div>
           ) : (
             <div className="mt-6">
-              <Notice>현금 환전은 답변으로 토큰을 획득한 치료사 회원만 이용할 수 있어요.</Notice>
-              <Link href="/signup?role=therapist" className="btn-ghost mt-4">
-                치료사로 가입하기
-              </Link>
+              <Notice>수익 토큰 환전은 답변으로 토큰을 획득한 치료사 회원만 이용할 수 있어요.</Notice>
             </div>
           ))}
+
+        {tab === "withdraw" && cash > 0 && (
+          <div className="mt-6 rounded-2xl border border-slate-200 p-5">
+            <div className="font-bold">충전 잔액 환불</div>
+            <p className="mt-1 text-sm leading-relaxed text-slate-500">
+              쓰지 않은 충전 토큰 <b className="text-ink">{cash.toLocaleString()}토큰</b>을 수수료 {Math.round(BALANCE_REFUND_FEE_RATE * 100)}%를 빼고{" "}
+              <b className="text-ink">{Math.floor(cash * TOKEN_KRW * (1 - BALANCE_REFUND_FEE_RATE)).toLocaleString()}원</b>으로 돌려받을 수 있어요. 충전 후 {REVOKE_DAYS}일
+              이내 미사용분은 거래 내역의 &apos;결제 취소&apos;로 수수료 없이 환불돼요. 보너스 토큰은 환불되지 않아요.
+            </p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <input className="input" placeholder="입금 계좌 (본인 명의) 예) 국민은행 123456-78-901234" value={refundAccount} onChange={(e) => setRefundAccount(e.target.value)} />
+              <button
+                onClick={async () => {
+                  if (!confirm(`충전 토큰 ${cash.toLocaleString()}개를 환불 신청할까요?`)) return;
+                  const r = await store.balanceRefund(refundAccount);
+                  setMsg(r.ok ? { tone: "success", text: "환불 신청이 접수되었어요. 운영팀 확인 후 영업일 기준 2~3일 내 입금됩니다." } : { tone: "error", text: r.error });
+                }}
+                className="btn-ghost shrink-0"
+              >
+                환불 신청
+              </button>
+            </div>
+          </div>
+        )}
 
         {msg && (
           <div className="mt-4">

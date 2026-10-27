@@ -14,8 +14,9 @@ type BlockRow = typeof schema.blocks.$inferSelect;
 
 const iso = (v: string | null | undefined) => (v ? new Date(v).toISOString() : undefined);
 
-export function toUser(u: UserRow, p?: ProfileRow | null): User {
+export function toUser(u: UserRow, p?: ProfileRow | null, topTag?: [string, number]): User {
   return {
+    stats: { temperature: u.temperature, ratingCount: u.ratingCount, adoptedCount: u.adoptedCount, topTag },
     id: u.id,
     name: u.name ?? "회원",
     role: u.role ?? "patient",
@@ -73,6 +74,9 @@ export function toPost(p: PostRow, answers: Answer[]): Post {
     expiresAt: iso(p.expiresAt)!,
     views: p.views,
     answers,
+    answerCount: p.answerCount,
+    autoLower: p.autoLower,
+    tierChangedAt: iso(p.tierChangedAt),
     hidden: p.hidden || undefined,
   };
 }
@@ -98,6 +102,8 @@ export function fromPost(p: Post): typeof schema.posts.$inferInsert {
     expiresAt: p.expiresAt,
     views: p.views,
     hidden: !!p.hidden,
+    autoLower: !!p.autoLower,
+    tierChangedAt: p.tierChangedAt ?? p.createdAt,
   };
 }
 
@@ -154,6 +160,7 @@ export const toChat = (c: ChatRow): ChatMessage => ({
   authorId: c.authorId,
   body: c.body,
   kind: c.kind,
+  channel: c.channel,
   createdAt: iso(c.createdAt)!,
   hidden: c.hidden || undefined,
 });

@@ -12,14 +12,9 @@ export async function currentUserRow() {
   return u && !u.deletedAt ? u : null;
 }
 
-export class HttpError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+import { HttpError } from "./errors";
+
+export { HttpError };
 
 export async function requireUser(opts: { onboarded?: boolean } = { onboarded: true }) {
   const u = await currentUserRow();

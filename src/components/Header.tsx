@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown, RotateCcw, UserPlus } from "lucide-react";
 import { SITE } from "@/lib/config";
 import { balanceOf, useStore } from "@/lib/store";
+import { NotificationBell } from "./NotificationBell";
 import { Avatar, TokenAmount, UserLine } from "./ui";
 
 export const NAV = [
@@ -71,6 +72,7 @@ export function Header() {
               <TokenAmount value={balanceOf(currentUser)} />
             </Link>
           )}
+          {serverMode && <NotificationBell />}
           {serverMode && !me && (
             <Link href={`/login?next=${encodeURIComponent(pathname)}`} className="btn-primary !py-2">
               로그인

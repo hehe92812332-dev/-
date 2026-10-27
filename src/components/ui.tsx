@@ -4,7 +4,7 @@ import { useId } from "react";
 import { Coins, ShieldCheck } from "lucide-react";
 import type { TierId } from "@/lib/config";
 import { getTier } from "@/lib/tier";
-import { temperatureOf, temperatureStyle, visibleRatings } from "@/lib/manner";
+import { temperatureStyle } from "@/lib/manner";
 import { userTier, useStore } from "@/lib/store";
 import type { User } from "@/lib/types";
 
@@ -76,8 +76,8 @@ export function Avatar({ user, size = 36 }: { user: User; size?: number }) {
 
 /** 만족도 온도 칩 — 이름 옆에 작게 */
 export function TempChip({ userId }: { userId: string }) {
-  const { ratings } = useStore();
-  const temp = temperatureOf(ratings, userId);
+  const { statsOf } = useStore();
+  const temp = statsOf(userId).temperature;
   const { color, face } = temperatureStyle(temp);
   return (
     <span className="inline-flex items-center gap-0.5 text-[11px] font-bold tabular-nums" style={{ color }} title="만족도 온도">
@@ -88,10 +88,9 @@ export function TempChip({ userId }: { userId: string }) {
 
 /** 만족도 온도 게이지 (당근 매너온도 방식) */
 export function TempGauge({ userId, size = "sm" }: { userId: string; size?: "sm" | "lg" }) {
-  const { ratings } = useStore();
-  const temp = temperatureOf(ratings, userId);
+  const { statsOf } = useStore();
+  const { temperature: temp, ratingCount: count } = statsOf(userId);
   const { color, face } = temperatureStyle(temp);
-  const count = visibleRatings(ratings, userId).length;
   return (
     <div>
       <div className="flex items-end justify-between">

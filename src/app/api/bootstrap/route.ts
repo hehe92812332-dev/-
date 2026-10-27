@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { buildSnapshot } from "@/server/snapshot";
+import { bootstrap, viewerOf } from "@/server/queries";
 import { currentUserRow, handle } from "@/server/session";
 
 export const dynamic = "force-dynamic";
 
 export const GET = handle(async () => {
-  const viewer = await currentUserRow();
-  return NextResponse.json(await buildSnapshot(viewer), { headers: { "Cache-Control": "private, no-store" } });
+  return NextResponse.json(await bootstrap(await viewerOf(await currentUserRow())), { headers: { "Cache-Control": "private, no-store" } });
 });

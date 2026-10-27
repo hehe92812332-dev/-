@@ -4,27 +4,17 @@ import Link from "next/link";
 import { useState } from "react";
 import { BookOpenCheck, Building2, GraduationCap, ShieldCheck, Timer } from "lucide-react";
 import { Avatar, TempGauge, TierBadge } from "@/components/ui";
-import { tagCounts, temperatureOf } from "@/lib/manner";
+import { useTherapists } from "@/lib/queries";
 import { CATEGORIES, DEGREES, HOSPITAL_TYPES } from "@/lib/config";
 import { userTier, useStore } from "@/lib/store";
-import { tierRank } from "@/lib/tier";
 import { quoteQuestion } from "@/lib/ledger";
 
 export default function TherapistsPage() {
-  const { users, posts, state, currentUser, ratings } = useStore();
+  const { state, currentUser, statsOf } = useStore();
   const [spec, setSpec] = useState("전체");
   const [sort, setSort] = useState<"tier" | "temp">("tier");
-
-  const therapists = users
-    .filter((u) => u.therapist?.licenseVerified && (spec === "전체" || u.therapist.specialties.includes(spec as (typeof CATEGORIES)[number])))
-    .sort((a, b) =>
-      sort === "temp"
-        ? temperatureOf(ratings, b.id) - temperatureOf(ratings, a.id)
-        : tierRank(userTier(b)!.id) - tierRank(userTier(a)!.id) || b.therapist!.experienceYears - a.therapist!.experienceYears,
-    );
-
-  const adoptedCount = (id: string) =>
-    posts.filter((p) => p.adoptedAnswerId && p.answers.find((a) => a.id === p.adoptedAnswerId)?.authorId === id).length;
+  const list = useTherapists({ spec: spec === "전체" ? undefined : spec, sort });
+  const therapists = list.users.filter((u) => u.therapist?.licenseVerified);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:py-12">
@@ -62,7 +52,7 @@ export default function TherapistsPage() {
         {therapists.map((u) => {
           const t = u.therapist!;
           const tier = userTier(u)!;
-          const topTag = tagCounts(ratings, u.id)[0];
+          const { topTag, adoptedCount } = statsOf(u.id);
           return (
             <div key={u.id} className="card flex flex-col p-5">
               <Link href={`/users/${u.id}`} className="flex items-center gap-3 hover:opacity-80">
@@ -109,7 +99,7 @@ export default function TherapistsPage() {
               </div>
               <div className="mt-auto flex items-center justify-between pt-5">
                 <span className="text-xs text-slate-500">
-                  채택 답변 <b className="text-ink">{adoptedCount(u.id)}</b>
+                  채택 답변 <b className="text-ink">{adoptedCount}</b>
                 </span>
                 {currentUser?.id !== u.id && (
                   <Link href={`/qa/new?to=${u.id}`} className="btn-primary !px-3 !py-2 text-xs">
@@ -121,6 +111,14 @@ export default function TherapistsPage() {
           );
         })}
       </div>
+      {list.loading && <p className="mt-6 text-center text-sm text-slate-400">불러오는 중…</p>}
+      {list.hasMore && !list.loading && (
+        <div className="mt-6 text-center">
+          <button onClick={list.loadMore} className="btn-ghost">
+            더 보기
+          </button>
+        </div>
+      )}
     </div>
   );
 }

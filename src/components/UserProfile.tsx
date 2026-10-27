@@ -4,7 +4,7 @@ import Link from "next/link";
 import { BookOpenCheck, Building2, GraduationCap, ShieldCheck, Timer } from "lucide-react";
 import { DEGREES, HOSPITAL_TYPES, RATING_SCORES } from "@/lib/config";
 import { quoteQuestion } from "@/lib/ledger";
-import { satisfactionRate, tagCounts, visibleRatings } from "@/lib/manner";
+import { useProfile } from "@/lib/queries";
 import { userTier, useStore } from "@/lib/store";
 import type { RatingScore } from "@/lib/types";
 import { PostCard } from "./PostList";
@@ -12,21 +12,20 @@ import { ReportMenu } from "./ReportMenu";
 import { Avatar, TempGauge, TierBadge, timeAgo } from "./ui";
 
 export function UserProfile({ id }: { id: string }) {
-  const { getUser, ratings, posts, state, currentUser } = useStore();
+  const { getUser, state, currentUser, statsOf } = useStore();
+  const prof = useProfile(id);
   const user = getUser(id);
+  if (!user && prof.loading) return <div className="mx-auto max-w-3xl px-4 py-16 text-center text-slate-400">불러오는 중…</div>;
   if (!user) return <div className="mx-auto max-w-3xl px-4 py-16 text-center text-slate-500">회원을 찾을 수 없습니다.</div>;
 
   const t = user.therapist;
   const tier = userTier(user);
-  const received = visibleRatings(ratings, id);
-  const tags = tagCounts(ratings, id);
-  const rate = satisfactionRate(ratings, id);
-  const scoreCount = (k: RatingScore) => received.filter((r) => r.score === k).length;
-  const answered = posts.filter((p) => p.answers.some((a) => a.authorId === id));
-  const adopted = answered.filter((p) => p.answers.find((a) => a.id === p.adoptedAnswerId)?.authorId === id);
-  const asked = posts.filter((p) => p.authorId === id && p.status !== "refunded");
-  // 임상 토론 글은 치료사 회원에게만 보여줍니다
-  const visible = (t ? answered : asked).filter((p) => p.board === "patient" || (currentUser && userTier(currentUser)));
+  const tags = prof.tags;
+  const scoreCount = (k: RatingScore) => prof.scoreCounts[k] ?? 0;
+  const totalScored = (Object.keys(RATING_SCORES) as RatingScore[]).reduce((a, k) => a + scoreCount(k), 0);
+  const rate = totalScored ? Math.round(((totalScored - scoreCount("bad")) / totalScored) * 100) : undefined;
+  // 서버가 권한(임상 토론은 치료사만)에 맞춰 골라 준 최근 활동
+  const visible = prof.posts;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 md:py-12">
@@ -96,7 +95,7 @@ export function UserProfile({ id }: { id: string }) {
             </div>
             <div className="rounded-xl bg-slate-50 p-3">
               <div className="text-xs text-slate-500">{t ? "채택된 답변" : "작성한 질문"}</div>
-              <div className="text-lg font-extrabold">{t ? adopted.length : asked.length}</div>
+              <div className="text-lg font-extrabold">{t ? statsOf(id).adoptedCount : visible.length}</div>
             </div>
           </div>
         </div>

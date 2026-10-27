@@ -119,7 +119,7 @@ const step = (n, ok, extra = '') => {
   await leg.fill('input[type=number]', '1000'); await leg.fill('input[placeholder^="예) 국민"]', '국민은행 123456-78-901234');
   await leg.click('button:has-text("환전 신청")'); await leg.waitForTimeout(1500);
   step('환전 신청', sqlq("select status from transactions where type='withdraw'") === 'requested', `memo=${sqlq("select memo from transactions where type='withdraw'")}`);
-  await ad.goto(U + '/admin', { waitUntil: 'networkidle' }); await ad.click('button:has-text("환전 신청")');
+  await ad.goto(U + '/admin', { waitUntil: 'networkidle' }); await ad.click('button:has-text("환전·환불")');
   step('관리자 계좌 확인', (await ad.locator('text=123456-78-901234').count()) === 1);
   ad.once('dialog', d => d.accept()); await ad.click('button:has-text("이체 완료")'); await ad.waitForTimeout(1500);
   step('이체 완료', sqlq("select status from transactions where type='withdraw'") === 'paid');
@@ -143,14 +143,75 @@ const step = (n, ok, extra = '') => {
   const unauth = execSync(`curl -s -o /dev/null -w '%{http_code}' ${U}/api/cron/sweep`).toString();
   const cron = execSync(`curl -s -H 'Authorization: Bearer ${CRON}' ${U}/api/cron/sweep`).toString();
   step('크론 인증', unauth === '401');
-  step('크론 실행', cron.includes('"renewed":1') && cron.includes('"settled":1'), cron);
+  step('크론 실행', cron.includes('"renewed":1') && /"settled":[1-9]/.test(cron), cron);
   step('기한 환불', sqlq("select status||'/'||closed_reason from posts where id='p-3'") === 'refunded/no_answer');
 
   // 11. 데이터 노출 점검
-  const snap = await (await pat.request.get(U + '/api/bootstrap')).json();
-  const leak = snap.state.users.filter(u => u.id !== 'u-patient' && (u.wallet.cash || u.wallet.earned));
-  step('타인 지갑 비노출', leak.length === 0);
-  step('평가자 익명', snap.state.ratings.filter(r => r.fromId && r.fromId !== 'u-patient').length === 0);
+  const seen = [];
+  for (const path of ['/api/feed?board=patient', '/api/therapists?sort=temp', '/api/posts/p-1', '/api/users/u-legend'])
+    seen.push(...((await (await pat.request.get(U + path)).json()).users ?? []));
+  const leak = seen.filter(u => u.id !== 'u-patient' && (u.wallet.cash || u.wallet.earned || u.membership));
+  step('타인 지갑 비노출', seen.length > 5 && leak.length === 0, `확인한 회원 ${seen.length}명`);
+  const detail = await (await pat.request.get(U + '/api/posts/p-1')).json();
+  step('평가자 익명', (detail.myRatings ?? []).every(r => r.fromId === 'u-patient') && !JSON.stringify(detail.users).includes('fromId'));
+  const guestClinical = await (await b.newContext()).request.get(U + '/api/feed?board=clinical');
+  step('비회원 임상 토론 차단', guestClinical.status() === 403);
+
+  // 13. (1년 시뮬레이션 후 추가) 알림 · 내가 답변할 수 있는 질문 · 등급 낮추기 · 잔액 환불 · 라운지 채널
+  await pat.goto(U + '/', { waitUntil: 'networkidle' });
+  const bell = await pat.locator('button[aria-label^="알림"]').getAttribute('aria-label');
+  await pat.click('button[aria-label^="알림"]');
+  await pat.waitForSelector('text=질문에 새 답변이 달렸어요', { timeout: 10000 }).catch(() => {});
+  step('알림 (새 답변)', (await pat.locator('text=질문에 새 답변이 달렸어요').count()) > 0, bell);
+
+  await nt.goto(U + '/qa', { waitUntil: 'networkidle' });
+  await nt.click('button:has-text("내가 답변할 수 있는 질문")');
+  await nt.waitForTimeout(1500);
+  step('내가 답변할 수 있는 질문', (await nt.locator('a[href^="/qa/p-"]').count()) > 0);
+
+  await pat.goto(U + '/qa/new', { waitUntil: 'networkidle' });
+  await pat.click('button:has-text("다이아몬드")');
+  await pat.fill('#title', '등급 낮추기 테스트 질문입니다');
+  await pat.fill('#body', '다이아몬드 등급으로 질문하고 답변이 없을 때 등급을 낮춰 봅니다. 충분히 깁니다.');
+  await pat.click('button:has-text("질문 등록")'); await pat.waitForURL(/\/qa\/p-/, { timeout: 15000 });
+  const lowId = pat.url().split('/').pop();
+  const paid = Number(sqlq(`select bounty from posts where id='${lowId}'`)); // 멤버십 할인 반영된 금액
+  await pat.click('button:has-text("답변 등급 낮추기")');
+  await pat.locator('button:has-text("에메랄드")').first().click();
+  await until(() => sqlq(`select target_tier from posts where id='${lowId}'`) === 'emerald');
+  // 할인 비율을 유지한 채 등급 비용 비율만큼 줄어듦 (다이아 50 → 에메랄드 28)
+  step('등급 낮추기 + 차액 환불', sqlq(`select target_tier||'/'||bounty from posts where id='${lowId}'`) === `emerald/${Math.round((paid * 28) / 50)}`,
+    `${paid} → ${Math.round((paid * 28) / 50)}, 환불 ${sqlq(`select tokens from transactions where post_id='${lowId}' and type='lower_tier'`)}`);
+
+  // 자동 등급 낮추기: 하루가 지난 것으로 바꾸고 크론 실행
+  sqlq(`update posts set tier_changed_at = now() - interval '25 hours' where id='${lowId}'`);
+  sqlq(`update posts set auto_lower = true where id='${lowId}'`);
+  execSync(`curl -s -H 'Authorization: Bearer ${CRON}' ${U}/api/cron/sweep`);
+  step('자동 등급 낮추기 (크론)', sqlq(`select target_tier from posts where id='${lowId}'`) === 'amethyst', sqlq(`select title from notifications where link='/qa/${lowId}' order by created_at desc limit 1`));
+
+  await pat.goto(U + '/wallet?tab=withdraw', { waitUntil: 'networkidle' });
+  const cashBefore = sqlq("select cash from users where id='u-patient'");
+  await pat.fill('input[placeholder^="입금 계좌 (본인 명의)"]', '신한은행 110-123-456789');
+  pat.once('dialog', (d) => d.accept());
+  await pat.click('button:has-text("환불 신청")');
+  await until(() => sqlq("select count(*) from transactions where type='balance_refund'") === '1');
+  step('충전 잔액 환불 신청', sqlq("select cash from users where id='u-patient'") === '0', `${cashBefore}토큰 → ${sqlq("select krw from transactions where type='balance_refund'")}원`);
+  await ad.goto(U + '/admin', { waitUntil: 'networkidle' }); await ad.click('button:has-text("환전·환불")');
+  await ad.waitForSelector('text=충전 잔액 환불');
+  ad.once('dialog', (d) => d.accept()); await ad.locator('button:has-text("이체 완료")').first().click();
+  await until(() => sqlq("select status from transactions where type='balance_refund'") === 'paid');
+  step('잔액 환불 이체 + 알림', sqlq("select status from transactions where type='balance_refund'") === 'paid' && sqlq("select count(*) from notifications where user_id='u-patient' and type='payout'") === '1');
+
+  await t1.goto(U + '/lounge', { waitUntil: 'networkidle' }); await t2.goto(U + '/lounge', { waitUntil: 'networkidle' });
+  await t1.click('button:has-text("# 근골격계")');
+  await t1.fill('textarea', '근골격계 채널 테스트 메시지'); await t1.keyboard.press('Enter');
+  await until(() => sqlq("select count(*) from chat_messages where channel='근골격계'") === '1');
+  await t2.waitForSelector('button:has-text("# 근골격계") [aria-label="새 메시지"]', { timeout: 10000 }).catch(() => {});
+  const dot = await t2.locator('button:has-text("# 근골격계") [aria-label="새 메시지"]').count();
+  await t2.click('button:has-text("# 근골격계")');
+  let inChannel = true; try { await t2.waitForSelector('text=근골격계 채널 테스트 메시지', { timeout: 8000 }); } catch { inChannel = false; }
+  const leaked = await t2.locator('button:has-text("# 자유")').click().then(() => t2.waitForTimeout(800)).then(() => t2.locator('text=근골격계 채널 테스트 메시지').count());
+  step('라운지 채널 분리 + 새 글 표시', inChannel && dot === 1 && leaked === 0, `dot=${dot}`);
 
   // 12. 회원 탈퇴 → 개인정보 삭제, 재로그인 세션 무효
   await nt.goto(U + '/account', { waitUntil: 'networkidle' });

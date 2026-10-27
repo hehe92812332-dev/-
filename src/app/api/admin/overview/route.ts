@@ -25,7 +25,8 @@ export const GET = handle(async () => {
     .from(tp)
     .innerJoin(users, eq(users.id, tp.userId))
     .where(eq(tp.verification, "pending"))
-    .orderBy(tp.submittedAt);
+    .orderBy(tp.submittedAt)
+    .limit(50);
   const docRows = pending.length
     ? await db
         .select({ id: docs.id, userId: docs.userId, kind: docs.kind, filename: docs.filename, size: docs.size })
@@ -34,7 +35,7 @@ export const GET = handle(async () => {
     : [];
 
   // 2) 열린 신고 + 대상 내용
-  const openReports = await db.select().from(reports).where(eq(reports.status, "open")).orderBy(reports.createdAt).limit(200);
+  const openReports = await db.select().from(reports).where(eq(reports.status, "open")).orderBy(reports.createdAt).limit(50);
   const contentOf = async (type: string, id: string) => {
     if (type === "post") return (await db.select({ t: schema.posts.title, b: schema.posts.body }).from(schema.posts).where(eq(schema.posts.id, id)))[0];
     if (type === "answer") return (await db.select({ b: schema.answers.body }).from(schema.answers).where(eq(schema.answers.id, id)))[0];
@@ -59,8 +60,9 @@ export const GET = handle(async () => {
     .from(txs)
     .innerJoin(wa, eq(wa.txId, txs.id))
     .innerJoin(users, eq(users.id, txs.userId))
-    .where(and(eq(txs.type, "withdraw"), eq(txs.status, "requested")))
-    .orderBy(txs.createdAt);
+    .where(and(inArray(txs.type, ["withdraw", "balance_refund"]), eq(txs.status, "requested")))
+    .orderBy(txs.createdAt)
+    .limit(100);
 
   // 4) 결제 현황
   const recentOrders = await db
@@ -92,6 +94,7 @@ export const GET = handle(async () => {
     })),
     reports: reportList,
     withdrawals: withdrawals.map(({ tx, account, name, email }) => ({
+      kind: tx.type,
       txId: tx.id,
       userId: tx.userId,
       name,
@@ -99,7 +102,8 @@ export const GET = handle(async () => {
       tokens: -tx.tokens,
       grossKrw: -tx.tokens * TOKEN_KRW,
       netKrw: tx.krw,
-      withholdingKrw: Math.round(-tx.tokens * TOKEN_KRW * WITHHOLDING_TAX_RATE),
+      // 환전은 원천징수, 잔액 환불은 수수료
+      withholdingKrw: tx.type === "withdraw" ? Math.round(-tx.tokens * TOKEN_KRW * WITHHOLDING_TAX_RATE) : -tx.tokens * TOKEN_KRW - (tx.krw ?? 0),
       account: safeDecrypt(account),
       createdAt: tx.createdAt,
     })),

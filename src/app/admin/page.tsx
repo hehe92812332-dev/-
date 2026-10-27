@@ -33,6 +33,7 @@ interface Overview {
     createdAt: string;
   }[];
   withdrawals: {
+    kind: "withdraw" | "balance_refund";
     txId: string;
     name: string;
     email: string;
@@ -87,7 +88,7 @@ export default function AdminPage() {
   const tabs: [Tab, string, number?][] = [
     ["pending", "서류 심사", data?.pending.length],
     ["reports", "신고", data?.reports.length],
-    ["withdrawals", "환전 신청", data?.withdrawals.length],
+    ["withdrawals", "환전·환불", data?.withdrawals.length],
     ["orders", "결제 내역"],
     ["logs", "처리 기록"],
   ];
@@ -228,10 +229,11 @@ export default function AdminPage() {
                 <div key={w.txId} className="card flex flex-wrap items-center justify-between gap-4 p-5">
                   <div className="text-sm">
                     <div className="font-bold">
+                      <span className="chip mr-1">{w.kind === "withdraw" ? "수익 환전" : "충전 잔액 환불"}</span>
                       {w.name} <span className="font-normal text-slate-400">{w.email}</span>
                     </div>
                     <div className="mt-1 text-slate-600">
-                      {w.tokens.toLocaleString()}토큰 = {w.grossKrw.toLocaleString()}원 − 원천징수 {w.withholdingKrw.toLocaleString()}원 →{" "}
+                      {w.tokens.toLocaleString()}토큰 = {w.grossKrw.toLocaleString()}원 − {w.kind === "withdraw" ? "원천징수" : "수수료"} {w.withholdingKrw.toLocaleString()}원 →{" "}
                       <b className="text-brand-700">{w.netKrw.toLocaleString()}원 입금</b>
                     </div>
                     <div className="mt-1 text-slate-600">

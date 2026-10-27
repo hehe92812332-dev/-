@@ -29,6 +29,34 @@
       "when": 1793095649453,
       "tag": "0003_account_deletion",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793097576607,
+      "tag": "0004_pg_trgm",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793097577906,
+      "tag": "0005_scale",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793098611097,
+      "tag": "0006_scale_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793099642730,
+      "tag": "0007_auto_lower",
+      "breakpoints": true
     }
   ]
 }

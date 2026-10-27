@@ -56,6 +56,7 @@ export default function Terms() {
           답변이 없으면 전액 환불됩니다. 1:1 지정 질문은 {DIRECT_ANSWER_HOURS}시간 안에 답변이 없으면 전액 환불됩니다.
         </li>
         <li>채택 보상과 팁은 {SETTLEMENT_HOLD_DAYS}일의 정산 대기 후 환전할 수 있습니다.</li>
+        <li>질문자가 &apos;자동 등급 낮추기&apos;를 켠 경우, 답변이 없으면 하루마다 답변 등급이 한 단계씩 낮아지고 비용 차액이 환불됩니다.</li>
       </ol>
 
       <h2>제6조 (환전)</h2>

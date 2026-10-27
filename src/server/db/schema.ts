@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  real,
   customType,
   index,
   integer,
@@ -43,10 +44,15 @@ export const users = pgTable(
     sensitiveConsentAt: ts("sensitive_consent_at"),
     /** 회원 탈퇴 시각. 법정 보관 기록(거래 등)은 남기고 개인정보는 지웁니다 */
     deletedAt: ts("deleted_at"),
+    // 미리 계산해 두는 값 (목록·카드 표시용)
+    temperature: real("temperature").notNull().default(36.5),
+    ratingCount: integer("rating_count").notNull().default(0),
+    adoptedCount: integer("adopted_count").notNull().default(0),
   },
   (t) => [
     // 잔액이 음수가 되는 일은 DB 수준에서도 막습니다
     check("wallet_non_negative", sql`${t.cash} >= 0 AND ${t.bonus} >= 0 AND ${t.earned} >= 0`),
+    index("users_temperature_idx").on(t.temperature),
   ],
 );
 
@@ -100,12 +106,18 @@ export const therapistProfiles = pgTable("therapist_profiles", {
   specialties: jsonb("specialties").$type<string[]>().notNull(),
   bio: text("bio").notNull().default(""),
   verification: text("verification").$type<"pending" | "approved" | "rejected">().notNull().default("pending"),
+  /** 승인 시점에 계산한 보석 등급 (목록 정렬·필터용) */
+  tier: text("tier"),
+  tierRank: integer("tier_rank"),
   rejectReason: text("reject_reason"),
   /** 면허번호 (AES-256-GCM 암호화) */
   licenseNumberEnc: text("license_number_enc").notNull(),
   submittedAt: ts("submitted_at").notNull().defaultNow(),
   reviewedAt: ts("reviewed_at"),
-});
+}, (t) => [
+  index("profiles_directory_idx").on(t.verification, t.tierRank),
+  index("profiles_specialties_idx").using("gin", t.specialties),
+]);
 
 /** 면허증·경력증명서·교육 이수증·학위증명서 */
 export const credentialDocuments = pgTable(
@@ -119,7 +131,9 @@ export const credentialDocuments = pgTable(
     filename: text("filename").notNull(),
     mime: text("mime").notNull(),
     size: integer("size").notNull(),
-    data: bytea("data").notNull(),
+    /** 개발용: DB에 직접 저장 / 운영: 객체 저장소(S3 호환)에 두고 키만 저장 */
+    data: bytea("data"),
+    storageKey: text("storage_key"),
     uploadedAt: ts("uploaded_at").notNull().defaultNow(),
   },
   (t) => [index("documents_user_idx").on(t.userId)],
@@ -150,9 +164,20 @@ export const posts = pgTable(
     createdAt: ts("created_at").notNull(),
     expiresAt: ts("expires_at").notNull(),
     views: integer("views").notNull().default(0),
+    answerCount: integer("answer_count").notNull().default(0),
+    autoLower: boolean("auto_lower").notNull().default(true),
+    tierChangedAt: ts("tier_changed_at"),
     hidden: boolean("hidden").notNull().default(false),
   },
-  (t) => [index("posts_board_created_idx").on(t.board, t.createdAt), index("posts_open_expires_idx").on(t.status, t.expiresAt)],
+  (t) => [
+    index("posts_board_created_idx").on(t.board, t.createdAt),
+    index("posts_open_expires_idx").on(t.status, t.expiresAt),
+    index("posts_board_category_created_idx").on(t.board, t.category, t.createdAt),
+    index("posts_open_tier_idx").on(t.board, t.status, t.targetTier, t.answerCount),
+    index("posts_author_idx").on(t.authorId, t.createdAt),
+    // 한글 부분 검색용 트라이그램 인덱스
+    index("posts_search_trgm_idx").using("gin", sql`(${t.title} || ' ' || ${t.body}) gin_trgm_ops`),
+  ],
 );
 
 export const answers = pgTable(
@@ -170,7 +195,7 @@ export const answers = pgTable(
     tips: integer("tips").notNull().default(0),
     hidden: boolean("hidden").notNull().default(false),
   },
-  (t) => [index("answers_post_idx").on(t.postId)],
+  (t) => [index("answers_post_idx").on(t.postId), index("answers_author_idx").on(t.authorId, t.createdAt)],
 );
 
 export const answerLikes = pgTable(
@@ -225,8 +250,10 @@ export const ratings = pgTable(
     score: text("score").$type<"great" | "good" | "bad">().notNull(),
     tags: jsonb("tags").$type<string[]>().notNull(),
     createdAt: ts("created_at").notNull(),
+    /** 블라인드가 풀려 온도에 반영된 시각 */
+    revealedAt: ts("revealed_at"),
   },
-  (t) => [index("ratings_to_idx").on(t.toId), index("ratings_post_idx").on(t.postId)],
+  (t) => [index("ratings_to_idx").on(t.toId), index("ratings_post_idx").on(t.postId), index("ratings_unrevealed_idx").on(t.createdAt).where(sql`revealed_at is null`)],
 );
 
 export const chatMessages = pgTable(
@@ -239,10 +266,11 @@ export const chatMessages = pgTable(
       .references(() => users.id),
     body: text("body").notNull(),
     kind: text("kind").$type<"text" | "study">().notNull(),
+    channel: text("channel").notNull().default("자유"),
     createdAt: ts("created_at").notNull(),
     hidden: boolean("hidden").notNull().default(false),
   },
-  (t) => [index("chat_room_created_idx").on(t.room, t.createdAt)],
+  (t) => [index("chat_room_created_idx").on(t.room, t.createdAt), index("chat_room_channel_created_idx").on(t.room, t.channel, t.createdAt)],
 );
 
 // ───────────── 신고·차단 ─────────────
@@ -344,4 +372,34 @@ export const adminLogs = pgTable(
     createdAt: ts("created_at").notNull().defaultNow(),
   },
   (t) => [index("admin_logs_created_idx").on(t.createdAt)],
+);
+
+/** 받은 평가 항목 집계 (공개된 평가만) */
+export const userTagCounts = pgTable(
+  "user_tag_counts",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tag: text("tag").notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.tag] })],
+);
+
+/** 알림 (답변 도착, 채택, 1:1 질문, 심사 결과 등) */
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    title: text("title").notNull(),
+    link: text("link"),
+    read: boolean("read").notNull().default(false),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("notifications_user_idx").on(t.userId, t.createdAt)],
 );

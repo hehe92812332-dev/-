@@ -19,7 +19,8 @@ import {
 import { PostCard } from "@/components/PostList";
 import { TierBadge, TokenAmount } from "@/components/ui";
 import { TIERS } from "@/lib/config";
-import { useStore } from "@/lib/store";
+import { useFeed, useSiteStats } from "@/lib/queries";
+import { userTier, useStore } from "@/lib/store";
 
 const STEPS = [
   { icon: Coins, title: "토큰 충전", desc: "카드·간편결제로 토큰을 충전해요." },
@@ -30,10 +31,12 @@ const STEPS = [
 ];
 
 export default function Home() {
-  const { posts, users } = useStore();
-  const therapistCount = users.filter((u) => u.therapist?.licenseVerified).length;
-  const recentQa = posts.filter((p) => p.board === "patient" && p.status !== "refunded").slice(0, 4);
-  const recentClinical = posts.filter((p) => p.board === "clinical" && p.status !== "refunded").slice(0, 2);
+  const { currentUser } = useStore();
+  const stats = useSiteStats();
+  const therapistCount = Object.values(stats.counts).reduce((a, b) => a + b, 0);
+  const isVerified = !!currentUser && !!userTier(currentUser);
+  const recentQa = useFeed({ board: "patient", limit: 4 }).posts;
+  const recentClinical = useFeed(isVerified ? { board: "clinical", limit: 2 } : null).posts;
 
   return (
     <>
@@ -66,7 +69,7 @@ export default function Home() {
           <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6">
             {[
               ["인증 치료사", `${therapistCount}명+`],
-              ["누적 질문", `${posts.length}건+`],
+              ["누적 질문", `${stats.questions.toLocaleString()}건+`],
               ["평균 첫 답변", "2시간"],
             ].map(([k, v]) => (
               <div key={k}>
@@ -203,11 +206,20 @@ export default function Home() {
             전체 보기
           </Link>
         </div>
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          {recentClinical.map((p) => (
-            <PostCard key={p.id} post={p} />
-          ))}
-        </div>
+        {isVerified ? (
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            {recentClinical.map((p) => (
+              <PostCard key={p.id} post={p} />
+            ))}
+          </div>
+        ) : (
+          <div className="card mt-6 px-6 py-10 text-center text-sm text-slate-500">
+            임상 토론은 서류 심사를 마친 치료사 회원만 볼 수 있어요.
+            <Link href="/signup?role=therapist" className="ml-2 font-semibold text-brand-700">
+              치료사로 가입하기 →
+            </Link>
+          </div>
+        )}
       </section>
     </>
   );

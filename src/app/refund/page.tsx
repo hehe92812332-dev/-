@@ -1,5 +1,5 @@
 import { LegalPage } from "@/components/LegalPage";
-import { BUSINESS, REVOKE_DAYS } from "@/lib/config";
+import { BALANCE_REFUND_FEE_RATE, BUSINESS, REVOKE_DAYS } from "@/lib/config";
 
 export const metadata = { title: "환불 정책" };
 
@@ -17,17 +17,23 @@ export default function Refund() {
         충전분을 일부 사용한 뒤의 환불은 고객센터({BUSINESS.email})로 요청해 주세요. 사용하지 않은 충전 토큰에 해당하는 금액에서 결제 수수료 등 법령이 허용하는 비용을
         뺀 금액을 환불합니다.
       </p>
-      <h2>3. 질문 토큰</h2>
+      <h2>3. 미사용 충전 잔액 환불</h2>
+      <p>
+        청약철회 기간이 지난 뒤에도 쓰지 않은 충전 토큰은 지갑의 &apos;환전·환불&apos; 탭에서 환불을 신청할 수 있습니다. 수수료 {Math.round(BALANCE_REFUND_FEE_RATE * 100)}%를
+        제외한 금액을 본인 명의 계좌로 영업일 기준 2~3일 안에 입금하며, 보너스 토큰은 환불 대상이 아닙니다.
+      </p>
+      <h2>4. 질문 토큰</h2>
       <ul>
         <li>답변이 달리기 전 질문 취소, 기한 내 무답변, 운영 정책에 따른 숨김 처리 시 질문에 쓴 토큰은 원래 지갑으로 전액 돌아옵니다.</li>
+        <li>답변 등급을 낮추면(직접 또는 자동) 등급 비용 차액이 바로 돌아옵니다.</li>
         <li>답변이 채택된 뒤에는 답변자에게 보상이 지급되므로 환불되지 않습니다.</li>
       </ul>
-      <h2>4. 멤버십</h2>
+      <h2>5. 멤버십</h2>
       <ul>
         <li>자동 갱신은 언제든 해지할 수 있으며, 해지해도 남은 기간까지 혜택이 유지됩니다.</li>
         <li>결제 후 {REVOKE_DAYS}일 이내이고 그 달 지급 토큰을 사용하지 않았다면 고객센터를 통해 전액 환불받을 수 있습니다.</li>
       </ul>
-      <h2>5. 문의</h2>
+      <h2>6. 문의</h2>
       <p>
         {BUSINESS.email} · {BUSINESS.phone}
       </p>
