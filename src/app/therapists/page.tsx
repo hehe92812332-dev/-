@@ -3,19 +3,25 @@
 import Link from "next/link";
 import { useState } from "react";
 import { BookOpenCheck, Building2, GraduationCap, ShieldCheck, Timer } from "lucide-react";
-import { Avatar, TierBadge } from "@/components/ui";
+import { Avatar, TempGauge, TierBadge } from "@/components/ui";
+import { tagCounts, temperatureOf } from "@/lib/manner";
 import { CATEGORIES, DEGREES, HOSPITAL_TYPES } from "@/lib/config";
 import { userTier, useStore } from "@/lib/store";
 import { tierRank } from "@/lib/tier";
 import { quoteQuestion } from "@/lib/ledger";
 
 export default function TherapistsPage() {
-  const { users, posts, state, currentUser } = useStore();
+  const { users, posts, state, currentUser, ratings } = useStore();
   const [spec, setSpec] = useState("전체");
+  const [sort, setSort] = useState<"tier" | "temp">("tier");
 
   const therapists = users
     .filter((u) => u.therapist && (spec === "전체" || u.therapist.specialties.includes(spec as (typeof CATEGORIES)[number])))
-    .sort((a, b) => tierRank(userTier(b)!.id) - tierRank(userTier(a)!.id) || b.therapist!.experienceYears - a.therapist!.experienceYears);
+    .sort((a, b) =>
+      sort === "temp"
+        ? temperatureOf(ratings, b.id) - temperatureOf(ratings, a.id)
+        : tierRank(userTier(b)!.id) - tierRank(userTier(a)!.id) || b.therapist!.experienceYears - a.therapist!.experienceYears,
+    );
 
   const adoptedCount = (id: string) =>
     posts.filter((p) => p.adoptedAnswerId && p.answers.find((a) => a.id === p.adoptedAnswerId)?.authorId === id).length;
@@ -39,13 +45,27 @@ export default function TherapistsPage() {
         ))}
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-4 flex gap-4 text-sm">
+        {(
+          [
+            ["tier", "등급 높은 순"],
+            ["temp", "만족도 온도 높은 순"],
+          ] as const
+        ).map(([k, label]) => (
+          <button key={k} onClick={() => setSort(k)} className={`font-semibold ${sort === k ? "text-brand-700 underline underline-offset-4" : "text-slate-400"}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {therapists.map((u) => {
           const t = u.therapist!;
           const tier = userTier(u)!;
+          const topTag = tagCounts(ratings, u.id)[0];
           return (
             <div key={u.id} className="card flex flex-col p-5">
-              <div className="flex items-center gap-3">
+              <Link href={`/users/${u.id}`} className="flex items-center gap-3 hover:opacity-80">
                 <Avatar user={u} size={48} />
                 <div>
                   <div className="flex items-center gap-1.5 font-bold">
@@ -56,6 +76,14 @@ export default function TherapistsPage() {
                     <TierBadge tier={tier.id} showGrade />
                   </div>
                 </div>
+              </Link>
+              <div className="mt-4">
+                <TempGauge userId={u.id} />
+                {topTag && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    가장 많이 받은 평가 <b className="text-ink">“{topTag[0]}”</b> {topTag[1]}
+                  </p>
+                )}
               </div>
               <p className="mt-4 line-clamp-2 text-sm leading-relaxed text-slate-600">{t.bio}</p>
               <ul className="mt-4 space-y-1.5 text-xs text-slate-500">

@@ -12,6 +12,7 @@ export const NAV = [
   { href: "/qa", label: "환자 Q&A" },
   { href: "/clinical", label: "임상 토론" },
   { href: "/therapists", label: "치료사 찾기" },
+  { href: "/lounge", label: "등급 라운지" },
   { href: "/tiers", label: "등급·토큰 안내" },
 ];
 

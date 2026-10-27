@@ -261,3 +261,20 @@ export const CATEGORIES = [
 ] as const;
 
 export type Category = (typeof CATEGORIES)[number];
+
+/** 만족도 온도 (당근 매너온도 방식): 모든 회원 36.5°C에서 시작, 평가에 따라 오르내립니다. */
+export const BASE_TEMPERATURE = 36.5;
+
+export const RATING_SCORES = {
+  great: { label: "최고예요", emoji: "😍", delta: 0.5 },
+  good: { label: "좋아요", emoji: "🙂", delta: 0.2 },
+  bad: { label: "아쉬워요", emoji: "😕", delta: -0.5 },
+} as const;
+
+/** 질문자가 답변(치료사)을 평가할 때 고르는 항목 */
+export const ANSWER_PRAISE_TAGS = ["설명이 이해하기 쉬워요", "근거가 명확해요", "친절하고 공감해줘요", "빠르게 답해줬어요", "실제로 도움이 됐어요"];
+export const ANSWER_COMPLAINT_TAGS = ["답변이 너무 짧아요", "질문과 관련이 적어요", "어려운 용어가 많아요"];
+
+/** 답변자가 질문자를 평가할 때 고르는 항목 */
+export const ASKER_PRAISE_TAGS = ["질문이 구체적이에요", "감사 표현을 잘해요", "채택이 빨라요"];
+export const ASKER_COMPLAINT_TAGS = ["정보가 부족했어요", "채택이 늦었어요"];

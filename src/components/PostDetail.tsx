@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Award, CheckCircle2, Clock, Eye, Gift, Heart, Lock, Plus, UserRoundCheck } from "lucide-react";
 import { BOUNTY_ADD_OPTIONS, TIP_OPTIONS } from "@/lib/config";
-import { rewardAfterFee } from "@/lib/ledger";
+import { canRateAnswer, canRateAsker, rewardAfterFee } from "@/lib/ledger";
+import { RatingForm } from "./RatingForm";
 import { userTier, useStore } from "@/lib/store";
 import { getTier, tierRank } from "@/lib/tier";
 import { Notice, TierBadge, TokenAmount, UserLine, timeAgo } from "./ui";
@@ -18,12 +19,13 @@ function timeLeft(iso: string) {
 
 export function PostDetail({ id }: { id: string }) {
   const store = useStore();
-  const { posts, getUser, currentUser, viewPost } = store;
+  const { posts, getUser, currentUser, viewPost, state } = store;
   const post = posts.find((p) => p.id === id);
   const [draft, setDraft] = useState("");
   const [msg, setMsg] = useState<{ tone: "error" | "success"; text: string } | null>(null);
   const [tipFor, setTipFor] = useState<string | null>(null);
   const [showBounty, setShowBounty] = useState(false);
+  const [ratingFor, setRatingFor] = useState<string | null>(null);
 
   useEffect(() => {
     viewPost(id);
@@ -153,6 +155,10 @@ export function PostDetail({ id }: { id: string }) {
         </div>
       )}
 
+      {currentUser && canRateAsker(state, currentUser.id, post) && (
+        <RatingForm postId={post.id} targetName={author.name} onDone={(text) => setMsg({ tone: "success", text })} />
+      )}
+
       <h2 className="mt-10 text-lg font-bold">
         답변 <span className="text-brand-600">{post.answers.length}</span>
       </h2>
@@ -170,7 +176,9 @@ export function PostDetail({ id }: { id: string }) {
                   <CheckCircle2 className="size-3.5" /> {post.closedReason === "auto_adopt" ? "자동 채택" : "질문자 채택"}
                 </div>
               )}
-              <UserLine user={u} sub={`${u.therapist?.hospitalName ?? ""} · ${timeAgo(a.createdAt)}`} />
+              <Link href={`/users/${u.id}`} className="block w-fit rounded-lg hover:opacity-80">
+                <UserLine user={u} sub={`${u.therapist?.hospitalName ?? ""} · ${timeAgo(a.createdAt)}`} />
+              </Link>
               <p className="mt-4 whitespace-pre-wrap leading-relaxed text-slate-700">{a.body}</p>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <button
@@ -189,15 +197,39 @@ export function PostDetail({ id }: { id: string }) {
                 >
                   <Gift className="size-3.5" /> 감사 팁{a.tips > 0 && ` · ${a.tips}`}
                 </button>
+                {currentUser && canRateAnswer(state, currentUser.id, post, a.id) && ratingFor !== a.id && (
+                  <button
+                    onClick={() => setRatingFor(a.id)}
+                    className="inline-flex items-center gap-1 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-bold text-brand-700 hover:bg-brand-100"
+                  >
+                    🌡️ 만족도 평가
+                  </button>
+                )}
                 {isOwner && post.status === "open" && (
                   <button
-                    onClick={() => show(store.adoptAnswer(post.id, a.id), `답변을 채택했어요. ${u.name} 선생님께 ${reward}토큰이 지급되었습니다.`)}
+                    onClick={() => {
+                      const r = store.adoptAnswer(post.id, a.id);
+                      show(r, `답변을 채택했어요. ${u.name} 선생님께 ${reward}토큰이 지급되었습니다. 답변 만족도도 남겨 주세요!`);
+                      if (r.ok) setRatingFor(a.id);
+                    }}
                     className="btn-primary ml-auto !py-1.5 text-xs"
                   >
                     이 답변 채택하기
                   </button>
                 )}
               </div>
+              {ratingFor === a.id && currentUser && canRateAnswer(state, currentUser.id, post, a.id) && (
+                <RatingForm
+                  postId={post.id}
+                  answerId={a.id}
+                  targetName={u.name}
+                  highlight={adopted}
+                  onDone={(text) => {
+                    setRatingFor(null);
+                    setMsg({ tone: "success", text });
+                  }}
+                />
+              )}
               {tipFor === a.id && (
                 <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 p-3">
                   <span className="text-xs text-slate-600">{u.name} 선생님께 감사의 토큰을 보내세요.</span>

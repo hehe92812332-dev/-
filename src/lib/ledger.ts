@@ -20,12 +20,14 @@ import {
   type TierId,
 } from "./config";
 import { getTier, tierFor, tierRank } from "./tier";
-import type { Board, Post, Transaction, User, Wallet } from "./types";
+import type { Board, ChatMessage, Post, Rating, RatingScore, Transaction, User, Wallet } from "./types";
 
 export interface State {
   users: User[];
   posts: Post[];
   transactions: Transaction[];
+  ratings: Rating[];
+  chats: ChatMessage[];
   currentUserId: string | null;
 }
 
@@ -369,6 +371,74 @@ export function tip(s: State, userId: string, postId: string, answerId: string, 
   s = addTx(s, { userId, type: "tip_sent", tokens: -amount, postId, memo: "감사 팁 보내기" });
   s = addTx(s, { userId: answer.authorId, type: "tip_received", tokens: received, postId, memo: `감사 팁 ${amount}토큰 받음 (수수료 차감)` });
   return { ok: true, state: s };
+}
+
+// ───────────────────────── 만족도 평가 (매너온도) ─────────────────────────
+
+/** 질문자가 이 답변을 평가할 수 있는지 */
+export function canRateAnswer(s: State, userId: string, post: Post, answerId: string) {
+  const answer = post.answers.find((a) => a.id === answerId);
+  return (
+    !!answer &&
+    post.authorId === userId &&
+    answer.authorId !== userId &&
+    !s.ratings.some((r) => r.fromId === userId && r.answerId === answerId)
+  );
+}
+
+/** 답변자가 질문자를 평가할 수 있는지 (질문이 마감된 뒤, 질문당 1회) */
+export function canRateAsker(s: State, userId: string, post: Post) {
+  return (
+    post.status === "adopted" &&
+    post.authorId !== userId &&
+    post.answers.some((a) => a.authorId === userId) &&
+    !s.ratings.some((r) => r.fromId === userId && r.postId === post.id && !r.answerId)
+  );
+}
+
+export function rate(
+  s: State,
+  userId: string,
+  input: { postId: string; answerId?: string; score: RatingScore; tags: string[] },
+): Outcome {
+  const post = s.posts.find((p) => p.id === input.postId);
+  if (!post) return fail("잘못된 요청입니다.");
+  let toId: string;
+  if (input.answerId) {
+    if (!canRateAnswer(s, userId, post, input.answerId)) return fail("이미 평가했거나 평가할 수 없는 답변입니다.");
+    toId = post.answers.find((a) => a.id === input.answerId)!.authorId;
+  } else {
+    if (!canRateAsker(s, userId, post)) return fail("이미 평가했거나 평가할 수 없는 질문입니다.");
+    toId = post.authorId;
+  }
+  return {
+    ok: true,
+    state: {
+      ...s,
+      ratings: [
+        { id: uid("r"), fromId: userId, toId, postId: post.id, answerId: input.answerId, score: input.score, tags: input.tags, createdAt: iso(Date.now()) },
+        ...s.ratings,
+      ],
+    },
+  };
+}
+
+// ───────────────────────── 등급 라운지 채팅 ─────────────────────────
+
+export function sendChat(s: State, userId: string, body: string, kind: ChatMessage["kind"]): Outcome {
+  const user = s.users.find((u) => u.id === userId);
+  const tier = user && userTier(user);
+  if (!tier) return fail("등급 라운지는 면허 인증된 치료사만 이용할 수 있습니다.");
+  const text = body.trim();
+  if (!text) return fail("메시지를 입력해 주세요.");
+  if (text.length > 1000) return fail("메시지는 1000자까지 보낼 수 있습니다.");
+  return {
+    ok: true,
+    state: {
+      ...s,
+      chats: [...s.chats, { id: uid("c"), room: tier.id, authorId: userId, body: text, kind, createdAt: iso(Date.now()) }],
+    },
+  };
 }
 
 // ───────────────────────── 자동 정산 (서버에서는 크론 작업) ─────────────────────────

@@ -1,15 +1,18 @@
 "use client";
 
+import { useId } from "react";
 import { Coins, ShieldCheck } from "lucide-react";
 import type { TierId } from "@/lib/config";
 import { getTier } from "@/lib/tier";
-import { userTier } from "@/lib/store";
+import { temperatureOf, temperatureStyle } from "@/lib/manner";
+import { userTier, useStore } from "@/lib/store";
 import type { User } from "@/lib/types";
 
 /** 등급별 보석 아이콘. 진주는 구슬, 원석은 다듬어지지 않은 돌 모양 */
 export function GemIcon({ tier, className = "size-3.5" }: { tier: TierId; className?: string }) {
   const t = getTier(tier);
-  const id = `gem-${t.id}`;
+  // 인스턴스마다 고유 id — 같은 id가 숨겨진(display:none) 요소 안에 먼저 있으면 그라데이션이 렌더링되지 않습니다
+  const id = `gem-${t.id}-${useId().replace(/:/g, "")}`;
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden>
       <defs>
@@ -71,6 +74,42 @@ export function Avatar({ user, size = 36 }: { user: User; size?: number }) {
   );
 }
 
+/** 만족도 온도 칩 — 이름 옆에 작게 */
+export function TempChip({ userId }: { userId: string }) {
+  const { ratings } = useStore();
+  const temp = temperatureOf(ratings, userId);
+  const { color, face } = temperatureStyle(temp);
+  return (
+    <span className="inline-flex items-center gap-0.5 text-[11px] font-bold tabular-nums" style={{ color }} title="만족도 온도">
+      {temp.toFixed(1)}°C <span aria-hidden>{face}</span>
+    </span>
+  );
+}
+
+/** 만족도 온도 게이지 (당근 매너온도 방식) */
+export function TempGauge({ userId, size = "sm" }: { userId: string; size?: "sm" | "lg" }) {
+  const { ratings } = useStore();
+  const temp = temperatureOf(ratings, userId);
+  const { color, face } = temperatureStyle(temp);
+  const count = ratings.filter((r) => r.toId === userId).length;
+  return (
+    <div>
+      <div className="flex items-end justify-between">
+        <span className={`font-semibold text-slate-500 underline decoration-dotted underline-offset-4 ${size === "lg" ? "text-sm" : "text-xs"}`}>
+          만족도 온도
+        </span>
+        <span className={`flex items-center gap-1 font-extrabold tabular-nums ${size === "lg" ? "text-2xl" : "text-base"}`} style={{ color }}>
+          {temp.toFixed(1)}°C <span className={size === "lg" ? "text-3xl" : "text-lg"}>{face}</span>
+        </span>
+      </div>
+      <div className={`mt-1.5 overflow-hidden rounded-full bg-slate-100 ${size === "lg" ? "h-2.5" : "h-1.5"}`}>
+        <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, temp)}%`, backgroundColor: color }} />
+      </div>
+      <div className="mt-1 text-right text-[11px] text-slate-400">받은 평가 {count}개 · 첫 온도 36.5°C</div>
+    </div>
+  );
+}
+
 export function UserLine({ user, sub }: { user: User; sub?: string }) {
   const tier = userTier(user);
   return (
@@ -88,6 +127,7 @@ export function UserLine({ user, sub }: { user: User; sub?: string }) {
           ) : (
             <span className="text-xs font-medium text-slate-500">환자 회원</span>
           )}
+          <TempChip userId={user.id} />
         </div>
         {sub && <div className="truncate text-xs text-slate-500">{sub}</div>}
       </div>

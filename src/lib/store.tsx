@@ -8,12 +8,14 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import type { Category, MembershipPlanId, PaymentMethodId, TierId } from "./config";
 import * as ledger from "./ledger";
 import type { Outcome, State } from "./ledger";
-import { seedPosts, seedTransactions, seedUsers } from "./seed";
-import type { Board, User } from "./types";
+import { seedChats, seedPosts, seedRatings, seedTransactions, seedUsers } from "./seed";
+import type { Board, ChatMessage, RatingScore, User } from "./types";
 
 export { balanceOf, userTier } from "./ledger";
 
-const STORAGE_KEY = "pt-bridge:v4";
+const STORAGE_KEY = "pt-bridge:v5";
+/** 데모에서 선택한 계정. 공유 데이터와 분리해 탭마다 다른 계정으로 채팅을 시험할 수 있게 합니다. */
+const ME_KEY = "pt-bridge:me";
 
 type Result = { ok: true; id?: string } | { ok: false; error: string };
 
@@ -21,6 +23,8 @@ const initialState = (): State => ({
   users: seedUsers(),
   posts: seedPosts(),
   transactions: seedTransactions(),
+  ratings: seedRatings(),
+  chats: seedChats(),
   currentUserId: "u-patient",
 });
 
@@ -36,7 +40,8 @@ function useStoreValue() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setState(JSON.parse(saved));
+      const me = localStorage.getItem(ME_KEY);
+      setState((s) => ({ ...(saved ? (JSON.parse(saved) as State) : s), currentUserId: me ?? s.currentUserId }));
     } catch {
       /* 저장소를 쓸 수 없으면 시드 데이터로 동작 */
     }
@@ -44,13 +49,30 @@ function useStoreValue() {
     setReady(true);
     // 기한 만료 질문 자동 정산 (서버에서는 크론 작업으로 대체)
     const timer = setInterval(() => setState((s) => ledger.sweep(s)), 60_000);
-    return () => clearInterval(timer);
+    // 다른 탭에서 바뀐 내용(채팅 등)을 바로 반영 — 실서비스에서는 웹소켓/실시간 DB로 대체
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== STORAGE_KEY || !e.newValue) return;
+      try {
+        const next = JSON.parse(e.newValue) as State;
+        setState((s) => ({ ...next, currentUserId: s.currentUserId }));
+      } catch {
+        /* noop */
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
   useEffect(() => {
     if (!ready) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      // 값이 같으면 storage 이벤트가 발생하지 않아 탭 간 무한 반영이 생기지 않습니다.
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, currentUserId: null }));
+      if (state.currentUserId) localStorage.setItem(ME_KEY, state.currentUserId);
+      else localStorage.removeItem(ME_KEY);
     } catch {
       /* noop */
     }
@@ -131,6 +153,8 @@ function useStoreValue() {
     adoptAnswer: (postId: string, answerId: string) => run((s, u) => ledger.adopt(s, u, postId, answerId)),
     cancelPost: (postId: string) => run((s, u) => ledger.cancelPost(s, u, postId)),
     tip: (postId: string, answerId: string, amount: number) => run((s, u) => ledger.tip(s, u, postId, answerId, amount)),
+    rate: (input: { postId: string; answerId?: string; score: RatingScore; tags: string[] }) => run((s, u) => ledger.rate(s, u, input)),
+    sendChat: (body: string, kind: ChatMessage["kind"] = "text") => run((s, u) => ledger.sendChat(s, u, body, kind)),
   };
 }
 

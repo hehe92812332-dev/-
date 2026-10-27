@@ -111,3 +111,27 @@ export interface Transaction {
   revoked?: boolean;
   postId?: string;
 }
+
+export type RatingScore = "great" | "good" | "bad";
+
+/** 만족도 평가. 질문자 → 답변자(answerId 있음), 답변자 → 질문자(answerId 없음) 양방향 */
+export interface Rating {
+  id: string;
+  fromId: string;
+  toId: string;
+  postId: string;
+  answerId?: string;
+  score: RatingScore;
+  tags: string[];
+  createdAt: string;
+}
+
+/** 등급 라운지 채팅. study 메시지는 방 상단에 스터디 공지로 고정됩니다. */
+export interface ChatMessage {
+  id: string;
+  room: TierId;
+  authorId: string;
+  body: string;
+  kind: "text" | "study";
+  createdAt: string;
+}

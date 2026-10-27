@@ -1,4 +1,4 @@
-import type { Post, Transaction, User } from "./types";
+import type { ChatMessage, Post, Rating, RatingScore, Transaction, User } from "./types";
 
 const daysAgo = (d: number, h = 0) => new Date(Date.now() - (d * 24 + h) * 3600_000).toISOString();
 
@@ -100,6 +100,96 @@ export const seedUsers = (): User[] => [
       bio: "신규 치료사입니다. 선배님들께 많이 배우고 싶어요!",
     },
     wallet: { cash: 100, bonus: 0, earned: 0 },
+  },
+  {
+    id: "u-topaz2",
+    name: "윤서진",
+    role: "therapist",
+    avatarColor: "#fb923c",
+    joinedAt: daysAgo(150),
+    therapist: {
+      licenseVerified: true,
+      experienceYears: 6,
+      educationHours: 340,
+      degree: "none",
+      hospitalType: "sports",
+      hospitalName: "○○스포츠재활센터",
+      specialties: ["스포츠 재활", "운동치료"],
+      bio: "러닝·골프 손상 재활. 운동 처방과 테이핑을 주로 합니다.",
+    },
+    wallet: { cash: 30, bonus: 0, earned: 210 },
+  },
+  {
+    id: "u-topaz3",
+    name: "강도윤",
+    role: "therapist",
+    avatarColor: "#ea580c",
+    joinedAt: daysAgo(260),
+    therapist: {
+      licenseVerified: true,
+      experienceYears: 9,
+      educationHours: 380,
+      degree: "none",
+      hospitalType: "hospital",
+      hospitalName: "○○병원 재활치료실",
+      specialties: ["근골격계", "통증"],
+      bio: "척추 수술 후 재활 9년차. 요추 안정화 운동을 연구 중입니다.",
+    },
+    wallet: { cash: 0, bonus: 0, earned: 330 },
+  },
+  {
+    id: "u-sapph2",
+    name: "임하은",
+    role: "therapist",
+    avatarColor: "#3b82f6",
+    joinedAt: daysAgo(330),
+    therapist: {
+      licenseVerified: true,
+      experienceYears: 11,
+      educationHours: 410,
+      degree: "doctor",
+      hospitalType: "general",
+      hospitalName: "○○종합병원 재활의학과",
+      specialties: ["심폐", "신경계"],
+      bio: "호흡 재활·중환자 조기 재활. 물리치료학 박사.",
+    },
+    wallet: { cash: 20, bonus: 0, earned: 640 },
+  },
+  {
+    id: "u-opal2",
+    name: "서지민",
+    role: "therapist",
+    avatarColor: "#ec4899",
+    joinedAt: daysAgo(120),
+    therapist: {
+      licenseVerified: true,
+      experienceYears: 4,
+      educationHours: 240,
+      degree: "master",
+      hospitalType: "rehab",
+      hospitalName: "○○어린이재활병원",
+      specialties: ["소아", "신경계"],
+      bio: "소아 발달 재활, 재활과학 석사.",
+    },
+    wallet: { cash: 50, bonus: 0, earned: 90 },
+  },
+  {
+    id: "u-rough2",
+    name: "배수아",
+    role: "therapist",
+    avatarColor: "#94a3b8",
+    joinedAt: daysAgo(30),
+    therapist: {
+      licenseVerified: true,
+      experienceYears: 2,
+      educationHours: 120,
+      degree: "none",
+      hospitalType: "clinic",
+      hospitalName: "○○재활의학과의원",
+      specialties: ["도수치료", "운동치료"],
+      bio: "2년차 치료사. 진주 등급을 목표로 학회 교육 듣는 중!",
+    },
+    wallet: { cash: 40, bonus: 0, earned: 0 },
   },
 ];
 
@@ -284,4 +374,90 @@ export const seedTransactions = (): Transaction[] => [
   { id: "t-2", userId: "u-patient", type: "ask", tokens: -17, postId: "p-1", memo: "질문 등록: 전방십자인대 재건술…", createdAt: daysAgo(3) },
   { id: "t-6", userId: "u-legend", type: "reward", tokens: 29, postId: "p-4", memo: "답변 채택 보상 35토큰 (수수료 15% 차감)", createdAt: daysAgo(5, 18) },
   { id: "t-1", userId: "u-patient", type: "purchase", tokens: 300, bonusTokens: 15, krw: 30_000, method: "card", memo: "토큰 300개 + 보너스 15개 충전", createdAt: daysAgo(10) },
+];
+
+/** 지난 활동에서 받은 평가 (데모용 이력) */
+const history = (toId: string, scores: [RatingScore, string[]][], raters: string[]): Rating[] =>
+  scores.map(([score, tags], i) => ({
+    id: `r-h-${toId}-${i}`,
+    fromId: raters[i % raters.length],
+    toId,
+    postId: `archived-${toId}-${i}`,
+    answerId: toId === "u-patient" ? undefined : `archived-a-${i}`,
+    score,
+    tags,
+    createdAt: daysAgo(10 + i * 7),
+  }));
+
+const G = "great" as const;
+const OK = "good" as const;
+const BAD = "bad" as const;
+
+export const seedRatings = (): Rating[] => [
+  { id: "r-1", fromId: "u-patient", toId: "u-master", postId: "p-1", answerId: "a-1", score: G, tags: ["설명이 이해하기 쉬워요", "실제로 도움이 됐어요"], createdAt: daysAgo(2, 19) },
+  { id: "r-2", fromId: "u-patient", toId: "u-expert", postId: "p-1", answerId: "a-2", score: OK, tags: ["빠르게 답해줬어요"], createdAt: daysAgo(2, 19) },
+  { id: "r-3", fromId: "u-master", toId: "u-patient", postId: "p-1", score: G, tags: ["질문이 구체적이에요", "감사 표현을 잘해요"], createdAt: daysAgo(2, 18) },
+  { id: "r-4", fromId: "u-pro", toId: "u-legend", postId: "p-4", answerId: "a-4", score: G, tags: ["근거가 명확해요", "실제로 도움이 됐어요"], createdAt: daysAgo(5, 17) },
+  { id: "r-5", fromId: "u-legend", toId: "u-pro", postId: "p-4", score: G, tags: ["질문이 구체적이에요"], createdAt: daysAgo(5, 16) },
+  ...history(
+    "u-legend",
+    [
+      ...Array.from({ length: 10 }, (_, i): [RatingScore, string[]] => [G, i % 2 ? ["근거가 명확해요"] : ["설명이 이해하기 쉬워요", "실제로 도움이 됐어요"]]),
+      [OK, ["근거가 명확해요"]],
+      [OK, ["어려운 용어가 많아요"]],
+    ],
+    ["u-patient", "u-pro", "u-rookie", "u-opal2"],
+  ),
+  ...history(
+    "u-master",
+    [
+      ...Array.from({ length: 7 }, (_, i): [RatingScore, string[]] => [G, i % 2 ? ["친절하고 공감해줘요"] : ["실제로 도움이 됐어요", "빠르게 답해줬어요"]]),
+      [OK, ["빠르게 답해줬어요"]],
+      [OK, []],
+      [BAD, ["답변이 너무 짧아요"]],
+    ],
+    ["u-patient", "u-rookie", "u-topaz2"],
+  ),
+  ...history(
+    "u-expert",
+    [
+      [G, ["설명이 이해하기 쉬워요"]],
+      [G, ["실제로 도움이 됐어요"]],
+      [G, ["친절하고 공감해줘요"]],
+      [OK, ["빠르게 답해줬어요"]],
+      [OK, []],
+      [OK, ["설명이 이해하기 쉬워요"]],
+    ],
+    ["u-patient", "u-rookie"],
+  ),
+  ...history("u-pro", [[G, ["친절하고 공감해줘요"]], [OK, ["설명이 이해하기 쉬워요"]]], ["u-patient"]),
+  ...history("u-sapph2", [[G, ["근거가 명확해요"]], [G, ["근거가 명확해요"]], [G, ["실제로 도움이 됐어요"]], [OK, []]], ["u-patient", "u-rookie"]),
+  ...history("u-topaz2", [[OK, ["빠르게 답해줬어요"]], [OK, []], [BAD, ["질문과 관련이 적어요"]]], ["u-patient"]),
+  ...history("u-topaz3", [[BAD, ["답변이 너무 짧아요"]]], ["u-patient"]),
+  ...history("u-opal2", [[G, ["친절하고 공감해줘요"]], [G, ["설명이 이해하기 쉬워요"]]], ["u-patient"]),
+  ...history("u-patient", [[G, ["감사 표현을 잘해요"]], [OK, ["채택이 빨라요"]]], ["u-expert", "u-pro"]),
+];
+
+const chat = (id: string, room: ChatMessage["room"], authorId: string, minutesAgo: number, body: string, kind: ChatMessage["kind"] = "text"): ChatMessage => ({
+  id,
+  room,
+  authorId,
+  body,
+  kind,
+  createdAt: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
+});
+
+export const seedChats = (): ChatMessage[] => [
+  chat("c-1", "topaz", "u-topaz3", 60 * 26, "📚 이번 주 스터디: 경추성 두통 감별 평가 (토요일 오전 9시, 온라인). 자료는 금요일까지 올려둘게요!", "study"),
+  chat("c-2", "topaz", "u-expert", 60 * 25, "참석합니다! 저번에 얘기 나온 C1-2 굴곡 회전 검사 영상도 같이 보면 좋을 것 같아요."),
+  chat("c-3", "topaz", "u-topaz2", 60 * 3, "혹시 요추 안정화 운동할 때 복부 드로잉인 큐잉 어떻게들 하세요? 환자분들이 숨을 참는 경우가 많아서요."),
+  chat("c-4", "topaz", "u-topaz3", 60 * 2 + 40, "저는 '배꼽을 척추 쪽으로 살짝, 숨은 계속 쉬면서'라고 하고 손을 ASIS 안쪽에 대고 피드백 줘요. 압력 바이오피드백 쓰면 훨씬 빨리 잡혀요."),
+  chat("c-5", "topaz", "u-expert", 60 * 2, "저도 비슷해요. 처음엔 누운 자세에서 숫자 세면서 10초 유지부터 시작하면 숨 참는 게 줄더라고요."),
+  chat("c-6", "sapphire", "u-sapph2", 60 * 30, "📚 월간 저널 리뷰: 이번 달은 ICU 조기 가동화 메타분석 (마지막 주 수요일 저녁 8시)", "study"),
+  chat("c-7", "sapphire", "u-master", 60 * 5, "전방십자인대 재건술 후 개방사슬 운동 시작 시점, 요즘 병원마다 기준이 꽤 다르던데 선생님 병원은 어떻게 하세요?"),
+  chat("c-8", "sapphire", "u-sapph2", 60 * 4, "저희는 6주부터 90-45도 범위로 제한해서 시작해요. 이식건 종류에 따라 조금 다르게 가고요."),
+  chat("c-9", "opal", "u-opal2", 60 * 8, "소아 GMFCS 3단계 가정 프로그램 자료 정리한 거 있는데 공유해도 될까요?"),
+  chat("c-10", "opal", "u-pro", 60 * 7, "너무 좋아요! 요양병원이라 소아는 잘 모르지만 공부하고 싶어요 🙏"),
+  chat("c-11", "rough", "u-rough2", 60 * 12, "다들 학회 인정 교육 어디서 들으세요? 200시간 채우는 게 생각보다 오래 걸리네요 😂"),
+  chat("c-12", "rough", "u-rookie", 60 * 11, "저는 지역 학회 주말 연수 위주로 듣고 있어요. 온라인 인정 강좌도 있다고 들었어요!"),
 ];
