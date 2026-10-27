@@ -7,9 +7,10 @@ import { Avatar, TierBadge } from "@/components/ui";
 import { CATEGORIES, HOSPITAL_TYPES } from "@/lib/config";
 import { userTier, useStore } from "@/lib/store";
 import { calcScore } from "@/lib/tier";
+import { quoteQuestion } from "@/lib/ledger";
 
 export default function TherapistsPage() {
-  const { users, posts } = useStore();
+  const { users, posts, state, currentUser } = useStore();
   const [spec, setSpec] = useState("전체");
 
   const therapists = users
@@ -81,9 +82,11 @@ export default function TherapistsPage() {
                 <span className="text-xs text-slate-500">
                   채택 답변 <b className="text-ink">{adoptedCount(u.id)}</b>
                 </span>
-                <Link href="/qa/new" className="text-xs font-bold text-brand-700">
-                  질문하기 →
-                </Link>
+                {currentUser?.id !== u.id && (
+                  <Link href={`/qa/new?to=${u.id}`} className="btn-primary !px-3 !py-2 text-xs">
+                    1:1 질문 · {quoteQuestion(state, currentUser, { targetTier: tier.id, directTherapistId: u.id }).total}토큰
+                  </Link>
+                )}
               </div>
             </div>
           );

@@ -18,8 +18,62 @@ export const WITHHOLDING_TAX_RATE = 0.033;
 /** 최소 환전 토큰 수 */
 export const MIN_WITHDRAW_TOKENS = 500;
 
-/** 질문 후 답변 채택 기한(일). 기한 내 채택이 없으면 가장 추천 많은 답변이 자동 채택됩니다. */
+/** 질문 후 답변 채택 기한(일). 기한 내 채택이 없으면 가장 추천 많은 답변이 자동 채택, 답변이 없으면 전액 환불됩니다. */
 export const ADOPT_DEADLINE_DAYS = 7;
+
+/** 1:1 지정 질문: 지정한 치료사가 이 시간 안에 답변하지 않으면 자동 환불 (숨고의 미열람 견적 환불 방식) */
+export const DIRECT_ANSWER_HOURS = 48;
+
+/** 1:1 지정 질문 비용 = 해당 치료사 등급 질문 비용 × 배수 (JustAnswer식 전문가 지정) */
+export const DIRECT_COST_MULTIPLIER = 1.5;
+
+/** 채택 보상·팁이 환전 가능해지기까지의 정산 대기 기간 (크몽식 구매확정 후 정산) */
+export const SETTLEMENT_HOLD_DAYS = 3;
+
+/** 충전 후 이 기간 안에, 사용하지 않은 충전 토큰은 결제 취소(청약철회) 가능 */
+export const REVOKE_DAYS = 7;
+
+/** 좋은 답변에 보내는 감사 팁 (토스·카카오 후원, 슈퍼챗 방식) */
+export const TIP_OPTIONS = [5, 10, 30] as const;
+
+/** 현상금 추가 단위 (지식iN 내공 추가 / Stack Overflow bounty 방식) */
+export const BOUNTY_ADD_OPTIONS = [10, 20, 50] as const;
+
+export const PAYMENT_METHODS = [
+  { id: "card", label: "신용·체크카드" },
+  { id: "kakaopay", label: "카카오페이" },
+  { id: "naverpay", label: "네이버페이" },
+  { id: "tosspay", label: "토스페이" },
+  { id: "phone", label: "휴대폰 결제" },
+] as const;
+
+export type PaymentMethodId = (typeof PAYMENT_METHODS)[number]["id"];
+
+/** 월 멤버십: 매달 토큰 지급 + 질문 할인 (JustAnswer·쿠팡 와우식 구독) */
+export const MEMBERSHIP_PLANS = [
+  {
+    id: "basic",
+    name: "베이직",
+    price: 9_900,
+    monthlyTokens: 99,
+    monthlyBonus: 15,
+    discountRate: 0.1,
+    perks: ["매월 99토큰 + 보너스 15토큰", "모든 질문 10% 할인", "답변 등록 알림"],
+  },
+  {
+    id: "premium",
+    name: "프리미엄",
+    price: 29_000,
+    monthlyTokens: 290,
+    monthlyBonus: 70,
+    discountRate: 0.2,
+    noDirectSurcharge: true,
+    perks: ["매월 290토큰 + 보너스 70토큰", "모든 질문 20% 할인", "1:1 지정 질문 할증 면제"],
+    badge: "추천",
+  },
+] as const;
+
+export type MembershipPlanId = (typeof MEMBERSHIP_PLANS)[number]["id"];
 
 export const TOKEN_PACKAGES = [
   { id: "p100", tokens: 100, bonus: 0, price: 10_000 },

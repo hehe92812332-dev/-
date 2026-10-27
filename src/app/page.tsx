@@ -1,7 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Banknote, Coins, MessageCircleQuestion, ShieldCheck, Stethoscope, Trophy } from "lucide-react";
+import {
+  ArrowRight,
+  BadgeCheck,
+  Banknote,
+  Coins,
+  CreditCard,
+  Crown,
+  Gift,
+  MessageCircleQuestion,
+  RotateCcw,
+  ShieldCheck,
+  Stethoscope,
+  Trophy,
+  UserRoundCheck,
+} from "lucide-react";
 import { PostCard } from "@/components/PostList";
 import { TierBadge, TokenAmount } from "@/components/ui";
 import { TIERS } from "@/lib/config";
@@ -18,8 +32,8 @@ const STEPS = [
 export default function Home() {
   const { posts, users } = useStore();
   const therapistCount = users.filter((u) => u.role === "therapist").length;
-  const recentQa = posts.filter((p) => p.board === "patient" && p.status !== "cancelled").slice(0, 4);
-  const recentClinical = posts.filter((p) => p.board === "clinical" && p.status !== "cancelled").slice(0, 2);
+  const recentQa = posts.filter((p) => p.board === "patient" && p.status !== "refunded").slice(0, 4);
+  const recentClinical = posts.filter((p) => p.board === "clinical" && p.status !== "refunded").slice(0, 2);
 
   return (
     <>
@@ -110,6 +124,33 @@ export default function Home() {
             </li>
           ))}
         </ol>
+      </section>
+
+      {/* Payment features */}
+      <section className="mx-auto mt-20 max-w-6xl px-4">
+        <h2 className="text-2xl font-extrabold tracking-tight md:text-3xl">내 상황에 맞는 결제 방식</h2>
+        <p className="mt-2 text-slate-500">필요할 때만 충전하거나, 자주 묻는다면 멤버십으로 더 저렴하게.</p>
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { icon: Coins, color: "bg-amber-100 text-amber-600", title: "토큰 충전", desc: "필요한 만큼 충전, 많이 충전할수록 보너스 최대 12%.", href: "/wallet" },
+            { icon: Crown, color: "bg-violet-100 text-violet-600", title: "월 멤버십", desc: "매달 토큰 지급 + 모든 질문 최대 20% 할인.", href: "/wallet?tab=membership" },
+            { icon: UserRoundCheck, color: "bg-sky-100 text-sky-600", title: "1:1 지정 질문", desc: "원하는 선생님께 직접. 48시간 무응답 시 자동 환불.", href: "/therapists" },
+            { icon: Gift, color: "bg-rose-100 text-rose-500", title: "감사 팁", desc: "도움이 된 답변에 토큰으로 마음을 전하세요.", href: "/qa" },
+          ].map(({ icon: Icon, color, title, desc, href }) => (
+            <Link key={title} href={href} className="card group p-5 transition hover:shadow-md">
+              <span className={`grid size-10 place-items-center rounded-xl ${color}`}>
+                <Icon className="size-5" />
+              </span>
+              <div className="mt-4 font-bold">{title}</div>
+              <p className="mt-1 text-sm text-slate-500">{desc}</p>
+            </Link>
+          ))}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 rounded-2xl bg-white px-5 py-4 text-sm text-slate-600 ring-1 ring-slate-200">
+          <span className="inline-flex items-center gap-1.5"><ShieldCheck className="size-4 text-brand-600" /> 토큰은 채택 전까지 안전하게 보관</span>
+          <span className="inline-flex items-center gap-1.5"><RotateCcw className="size-4 text-brand-600" /> 답변 없으면 자동 환불</span>
+          <span className="inline-flex items-center gap-1.5"><CreditCard className="size-4 text-brand-600" /> 7일 내 미사용 충전분 결제 취소</span>
+        </div>
       </section>
 
       {/* Tiers */}

@@ -31,15 +31,23 @@ export function PostCard({ post }: { post: Post }) {
     <Link href={`${base}/${post.id}`} className="card group block p-5 transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="chip">{post.category}</span>
-        <TierBadge tier={post.targetTier} />
-        <span className="text-slate-400">이상 답변 가능</span>
+        {post.directTherapistId ? (
+          <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-bold text-violet-700">
+            1:1 · {getUser(post.directTherapistId)?.name}
+          </span>
+        ) : (
+          <>
+            <TierBadge tier={post.targetTier} />
+            <span className="text-slate-400">이상 답변 가능</span>
+          </>
+        )}
         <span className="ml-auto">
           {post.status === "adopted" ? (
             <span className="inline-flex items-center gap-1 font-semibold text-brand-600">
               <CheckCircle2 className="size-3.5" /> 채택 완료
             </span>
-          ) : post.status === "cancelled" ? (
-            <span className="font-semibold text-slate-400">취소됨</span>
+          ) : post.status === "refunded" ? (
+            <span className="font-semibold text-slate-400">환불됨</span>
           ) : (
             <span className="font-semibold text-sky-600">답변 대기</span>
           )}
@@ -78,7 +86,7 @@ export function PostList({ board }: { board: Board }) {
       posts.filter(
         (p) =>
           p.board === board &&
-          p.status !== "cancelled" &&
+          p.status !== "refunded" &&
           (category === "전체" || p.category === category) &&
           (status === "all" || p.status === status) &&
           (!q || p.title.includes(q) || p.body.includes(q)),

@@ -4,7 +4,12 @@ import { useState } from "react";
 import { GraduationCap, Hospital, Timer } from "lucide-react";
 import { TierBadge, TokenAmount } from "@/components/ui";
 import {
+  ADOPT_DEADLINE_DAYS,
+  DIRECT_ANSWER_HOURS,
+  DIRECT_COST_MULTIPLIER,
   HOSPITAL_TYPES,
+  REVOKE_DAYS,
+  SETTLEMENT_HOLD_DAYS,
   MIN_WITHDRAW_TOKENS,
   SCORE_RULES,
   SETTLEMENT_FEE_RATE,
@@ -138,12 +143,16 @@ export default function TiersPage() {
       <h2 className="mt-14 text-xl font-extrabold tracking-tight">토큰 정책</h2>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         {[
-          ["토큰 가치", `1토큰 = ${TOKEN_KRW}원. 카드·간편결제로 충전하며 많이 충전할수록 보너스 토큰이 붙어요.`],
-          ["에스크로 보관", "질문 시 토큰은 플랫폼이 보관하고, 답변 채택 시점에 답변자에게 지급됩니다. 답변 전 취소하면 전액 환불돼요."],
-          ["정산 수수료", `채택 보상에서 플랫폼 수수료 ${Math.round(SETTLEMENT_FEE_RATE * 100)}%를 제외한 토큰이 지급됩니다.`],
+          ["토큰 가치", `1토큰 = ${TOKEN_KRW}원. 카드·카카오페이·네이버페이·토스페이·휴대폰으로 충전하며, 많이 충전할수록 보너스 토큰이 붙어요.`],
+          ["3가지 지갑", "충전 토큰(현금 충전분) · 보너스 토큰(혜택, 환불·환전 불가) · 수익 토큰(답변 보상, 환전 가능). 질문 시 보너스부터 사용돼요."],
+          ["에스크로 보관", `질문 시 토큰은 플랫폼이 보관하고 채택 시점에 지급돼요. 답변 전 취소하면 전액 환불, ${ADOPT_DEADLINE_DAYS}일 내 채택이 없으면 추천순 자동 채택, 답변이 없으면 자동 환불돼요.`],
+          ["1:1 지정 질문", `원하는 치료사를 지정해 질문할 수 있어요. 비용은 그 치료사 등급 비용의 ${DIRECT_COST_MULTIPLIER}배이며, ${DIRECT_ANSWER_HOURS}시간 안에 답변이 없으면 전액 환불돼요.`],
+          ["현상금 추가 · 감사 팁", "답변이 더 필요하면 현상금을 올려 기한을 연장하고, 도움이 된 답변에는 채택과 별도로 감사 팁을 보낼 수 있어요."],
+          ["멤버십", "월 정기결제로 매달 토큰과 보너스를 받고, 모든 질문을 10~20% 할인받아요. 자동 갱신은 언제든 해지할 수 있어요."],
+          ["정산 · 수수료", `채택 보상과 팁에서 플랫폼 수수료 ${Math.round(SETTLEMENT_FEE_RATE * 100)}%를 제외한 토큰이 지급되며, ${SETTLEMENT_HOLD_DAYS}일의 정산 대기 후 환전할 수 있어요.`],
           [
-            "현금 환전",
-            `답변으로 획득한 토큰만 ${MIN_WITHDRAW_TOKENS}토큰부터 환전할 수 있으며, 사업소득 원천징수 ${(WITHHOLDING_TAX_RATE * 100).toFixed(1)}%가 공제됩니다.`,
+            "현금 환전 · 결제 취소",
+            `수익 토큰만 ${MIN_WITHDRAW_TOKENS}토큰부터 환전 가능(원천징수 ${(WITHHOLDING_TAX_RATE * 100).toFixed(1)}% 공제). 충전 후 ${REVOKE_DAYS}일 이내 미사용 충전분은 결제 취소할 수 있어요.`,
           ],
         ].map(([t, d]) => (
           <div key={t} className="card p-5">

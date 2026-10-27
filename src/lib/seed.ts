@@ -2,14 +2,14 @@ import type { Post, Transaction, User } from "./types";
 
 const daysAgo = (d: number, h = 0) => new Date(Date.now() - (d * 24 + h) * 3600_000).toISOString();
 
-export const seedUsers: User[] = [
+export const seedUsers = (): User[] => [
   {
     id: "u-patient",
     name: "이서연",
     role: "patient",
     avatarColor: "#f472b6",
     joinedAt: daysAgo(40),
-    wallet: { purchased: 150, earned: 0 },
+    wallet: { cash: 220, bonus: 15, earned: 0 },
   },
   {
     id: "u-legend",
@@ -26,7 +26,7 @@ export const seedUsers: User[] = [
       specialties: ["신경계", "근골격계"],
       bio: "뇌졸중·척수손상 재활 18년. 신경계 물리치료 학회 정회원.",
     },
-    wallet: { purchased: 0, earned: 2340 },
+    wallet: { cash: 0, bonus: 0, earned: 2340 },
   },
   {
     id: "u-master",
@@ -43,7 +43,7 @@ export const seedUsers: User[] = [
       specialties: ["스포츠 재활", "운동치료"],
       bio: "프로 구단 트레이너 출신. 무릎·어깨 수술 후 재활 전문.",
     },
-    wallet: { purchased: 40, earned: 1180 },
+    wallet: { cash: 40, bonus: 0, earned: 1180 },
   },
   {
     id: "u-expert",
@@ -60,7 +60,7 @@ export const seedUsers: User[] = [
       specialties: ["도수치료", "통증"],
       bio: "척추·골반 도수치료. 근막 이완과 자세 교정에 관심이 많습니다.",
     },
-    wallet: { purchased: 60, earned: 520 },
+    wallet: { cash: 60, bonus: 0, earned: 520 },
   },
   {
     id: "u-pro",
@@ -77,7 +77,7 @@ export const seedUsers: User[] = [
       specialties: ["노인·요양", "심폐"],
       bio: "요양병원 3년차. 낙상 예방과 호흡 재활을 공부하고 있어요.",
     },
-    wallet: { purchased: 120, earned: 80 },
+    wallet: { cash: 120, bonus: 0, earned: 80 },
   },
   {
     id: "u-rookie",
@@ -94,11 +94,36 @@ export const seedUsers: User[] = [
       specialties: ["소아", "운동치료"],
       bio: "신규 치료사입니다. 선배님들께 많이 배우고 싶어요!",
     },
-    wallet: { purchased: 100, earned: 0 },
+    wallet: { cash: 100, bonus: 0, earned: 0 },
   },
 ];
 
-export const seedPosts: Post[] = [
+/** 일반 질문은 작성 후 7일, 1:1 질문은 48시간이 자동 정산 기한 */
+const withDeadline = (p: Post): Post => ({
+  ...p,
+  expiresAt: new Date(new Date(p.createdAt).getTime() + (p.directTherapistId ? 2 : 7) * 86400_000).toISOString(),
+});
+
+export const seedPosts = (): Post[] => rawPosts().map(withDeadline);
+
+const rawPosts = (): Post[] => [
+  {
+    id: "p-7",
+    board: "patient",
+    authorId: "u-patient",
+    title: "[1:1] 회전근개 봉합술 3개월, 팔을 머리 위로 올릴 때 걸리는 느낌이 있어요",
+    body: "최유나 선생님께 여쭙고 싶습니다. 3개월 전 우측 회전근개 봉합술을 받았고, 수동 운동 범위는 거의 돌아왔는데 스스로 팔을 들어 올릴 때 120도 근처에서 걸리는 느낌과 뻐근함이 있습니다. 지금 근력 운동을 시작해도 되는 시기인지 궁금합니다.",
+    category: "근골격계",
+    targetTier: "master",
+    directTherapistId: "u-master",
+    bounty: 90,
+    paidFrom: { cash: 90, bonus: 0, earned: 0 },
+    status: "open",
+    createdAt: daysAgo(0, 3),
+    expiresAt: "",
+    views: 12,
+    answers: [],
+  },
   {
     id: "p-1",
     board: "patient",
@@ -108,9 +133,11 @@ export const seedPosts: Post[] = [
     category: "스포츠 재활",
     targetTier: "expert",
     bounty: 35,
+    paidFrom: { cash: 35, bonus: 0, earned: 0 },
     status: "adopted",
     adoptedAnswerId: "a-1",
     createdAt: daysAgo(3),
+    expiresAt: "",
     views: 214,
     answers: [
       {
@@ -119,6 +146,7 @@ export const seedPosts: Post[] = [
         body: "6주차에는 대퇴사두근 근력이 아직 충분히 회복되지 않아 계단 하강 시 슬개대퇴관절에 부하가 몰리면서 앞쪽 통증이 흔히 나타납니다.\n\n1) 계단은 당분간 '좋은 다리 먼저 올라가고, 수술한 다리 먼저 내려가기'\n2) 벽 스쿼트(30~45도) 10회 × 3세트\n3) 스텝 다운 훈련은 낮은 높이(5cm)부터\n\n통증이 붓기·열감과 함께 심해지면 반드시 담당 의사에게 확인받으세요.",
         createdAt: daysAgo(2, 20),
         likes: ["u-patient", "u-expert"],
+        tips: 10,
       },
       {
         id: "a-2",
@@ -126,6 +154,7 @@ export const seedPosts: Post[] = [
         body: "최유나 선생님 말씀에 덧붙이면, 수술 부위 주변 대퇴사두근 안쪽(VMO) 활성화 운동을 같이 하면 도움이 됩니다. 누워서 무릎 밑에 수건을 받치고 눌러주는 Quad setting부터 시작해 보세요.",
         createdAt: daysAgo(2, 10),
         likes: ["u-patient"],
+        tips: 0,
       },
     ],
   },
@@ -138,8 +167,10 @@ export const seedPosts: Post[] = [
     category: "도수치료",
     targetTier: "pro",
     bounty: 20,
+    paidFrom: { cash: 20, bonus: 0, earned: 0 },
     status: "open",
     createdAt: daysAgo(0, 5),
+    expiresAt: "",
     views: 48,
     answers: [
       {
@@ -148,6 +179,7 @@ export const seedPosts: Post[] = [
         body: "개인차가 크지만 보통 주 1~2회, 4~8회 정도에서 증상 변화를 평가합니다. 다만 도수치료만으로는 재발이 잦아서, 턱 당기기(Chin tuck)와 흉추 신전 운동을 매일 병행하는 게 핵심입니다. 모니터 높이를 눈높이로 맞추는 것도 꼭 해 보세요.",
         createdAt: daysAgo(0, 2),
         likes: [],
+        tips: 0,
       },
     ],
   },
@@ -160,8 +192,10 @@ export const seedPosts: Post[] = [
     category: "노인·요양",
     targetTier: "rookie",
     bounty: 10,
+    paidFrom: { cash: 10, bonus: 0, earned: 0 },
     status: "open",
     createdAt: daysAgo(1),
+    expiresAt: "",
     views: 73,
     answers: [],
   },
@@ -174,9 +208,11 @@ export const seedPosts: Post[] = [
     category: "신경계",
     targetTier: "master",
     bounty: 60,
+    paidFrom: { cash: 60, bonus: 0, earned: 0 },
     status: "adopted",
     adoptedAnswerId: "a-4",
     createdAt: daysAgo(6),
+    expiresAt: "",
     views: 389,
     answers: [
       {
@@ -185,6 +221,7 @@ export const seedPosts: Post[] = [
         body: "저는 이동·보행 시에는 슬링, 앉아 있거나 치료 중에는 테이핑 + 팔걸이 지지를 조합합니다. 테이핑 단독으로는 아탈구 정도를 줄인다는 근거가 약하지만 통증 감소와 고유수용감각 측면에서는 보고가 있습니다.\n\n핵심은 (1) 상지 위치 관리 교육, (2) 견갑골 정렬, (3) FES 병행 가능 여부입니다. 보호자 교육이 가장 효과가 컸습니다.",
         createdAt: daysAgo(5, 18),
         likes: ["u-pro", "u-master", "u-expert", "u-rookie"],
+        tips: 0,
       },
     ],
   },
@@ -197,8 +234,10 @@ export const seedPosts: Post[] = [
     category: "소아",
     targetTier: "expert",
     bounty: 35,
+    paidFrom: { cash: 35, bonus: 0, earned: 0 },
     status: "open",
     createdAt: daysAgo(0, 9),
+    expiresAt: "",
     views: 61,
     answers: [],
   },
@@ -211,8 +250,10 @@ export const seedPosts: Post[] = [
     category: "근골격계",
     targetTier: "pro",
     bounty: 20,
+    paidFrom: { cash: 20, bonus: 0, earned: 0 },
     status: "open",
     createdAt: daysAgo(1, 4),
+    expiresAt: "",
     views: 142,
     answers: [
       {
@@ -221,16 +262,21 @@ export const seedPosts: Post[] = [
         body: "Peripheralization이면 해당 방향 부하는 일단 중단하는 것이 원칙입니다. 측방 이동(lateral shift)이 관찰되면 shift correction을 먼저 하고 다시 신전 반응을 확인해 보세요. 신경학적 증상(근력 저하, 감각 저하)이 동반되면 의뢰를 우선 고려합니다.",
         createdAt: daysAgo(1),
         likes: ["u-expert"],
+        tips: 0,
       },
     ],
   },
 ];
 
-export const seedTransactions: Transaction[] = [
-  { id: "t-1", userId: "u-patient", type: "purchase", tokens: 300, krw: 30_000, memo: "토큰 300개 + 보너스 15개 구매", createdAt: daysAgo(10) },
-  { id: "t-2", userId: "u-patient", type: "ask", tokens: -35, memo: "질문 등록: 전방십자인대 재건술…", createdAt: daysAgo(3) },
-  { id: "t-3", userId: "u-patient", type: "ask", tokens: -20, memo: "질문 등록: 거북목이 심한데…", createdAt: daysAgo(0, 5) },
-  { id: "t-4", userId: "u-patient", type: "ask", tokens: -10, memo: "질문 등록: 어머니(78세)가…", createdAt: daysAgo(1) },
-  { id: "t-5", userId: "u-master", type: "reward", tokens: 29, memo: "답변 채택 보상 (수수료 15% 차감)", createdAt: daysAgo(2) },
-  { id: "t-6", userId: "u-legend", type: "reward", tokens: 51, memo: "답변 채택 보상 (수수료 15% 차감)", createdAt: daysAgo(5) },
+export const seedTransactions = (): Transaction[] => [
+  { id: "t-8", userId: "u-patient", type: "ask", tokens: -90, postId: "p-7", memo: "1:1 지정 질문 등록: [1:1] 회전근개 봉합술…", createdAt: daysAgo(0, 3) },
+  { id: "t-7", userId: "u-patient", type: "purchase", tokens: 100, bonusTokens: 0, krw: 10_000, method: "kakaopay", memo: "토큰 100개 충전", createdAt: daysAgo(0, 4) },
+  { id: "t-3", userId: "u-patient", type: "ask", tokens: -20, postId: "p-2", memo: "질문 등록: 거북목이 심한데…", createdAt: daysAgo(0, 5) },
+  { id: "t-4", userId: "u-patient", type: "ask", tokens: -10, postId: "p-3", memo: "질문 등록: 어머니(78세)가…", createdAt: daysAgo(1) },
+  { id: "t-5", userId: "u-master", type: "reward", tokens: 29, postId: "p-1", memo: "답변 채택 보상 35토큰 (수수료 15% 차감)", createdAt: daysAgo(2, 20) },
+  { id: "t-9", userId: "u-master", type: "tip_received", tokens: 8, postId: "p-1", memo: "감사 팁 10토큰 받음 (수수료 차감)", createdAt: daysAgo(2, 19) },
+  { id: "t-10", userId: "u-patient", type: "tip_sent", tokens: -10, postId: "p-1", memo: "감사 팁 보내기", createdAt: daysAgo(2, 19) },
+  { id: "t-2", userId: "u-patient", type: "ask", tokens: -35, postId: "p-1", memo: "질문 등록: 전방십자인대 재건술…", createdAt: daysAgo(3) },
+  { id: "t-6", userId: "u-legend", type: "reward", tokens: 51, postId: "p-4", memo: "답변 채택 보상 60토큰 (수수료 15% 차감)", createdAt: daysAgo(5, 18) },
+  { id: "t-1", userId: "u-patient", type: "purchase", tokens: 300, bonusTokens: 15, krw: 30_000, method: "card", memo: "토큰 300개 + 보너스 15개 충전", createdAt: daysAgo(10) },
 ];
