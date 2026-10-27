@@ -9,6 +9,7 @@ import {
   DIRECT_ANSWER_HOURS,
   DIRECT_COST_MULTIPLIER,
   MAX_QUESTION_COST,
+  MIN_PURCHASE_TOKENS,
   MIN_WITHDRAW_TOKENS,
   REVOKE_DAYS,
   SETTLEMENT_FEE_RATE,
@@ -197,7 +198,7 @@ export default function TiersPage() {
       <h2 className="mt-14 text-xl font-extrabold tracking-tight">토큰 정책</h2>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         {[
-          ["토큰 가치", `1토큰 = ${TOKEN_KRW}원. 카드·카카오페이·네이버페이·토스페이·휴대폰으로 충전하며, 많이 충전할수록 보너스 토큰이 붙어요.`],
+          ["토큰 가치", `1토큰 = ${TOKEN_KRW}원, 최소 ${MIN_PURCHASE_TOKENS}토큰부터 충전. 카드·카카오페이·네이버페이·토스페이·휴대폰으로 충전하며, 많이 충전할수록 보너스 토큰이 붙어요.`],
           ["3가지 지갑", "충전 토큰(현금 충전분) · 보너스 토큰(혜택, 환불·환전 불가) · 수익 토큰(답변 보상, 환전 가능). 질문 시 보너스부터 사용돼요."],
           ["에스크로 보관", `질문 시 토큰은 플랫폼이 보관하고 채택 시점에 지급돼요. 답변 전 취소하면 전액 환불, ${ADOPT_DEADLINE_DAYS}일 내 채택이 없으면 추천순 자동 채택, 답변이 없으면 자동 환불돼요.`],
           ["1:1 지정 질문", `원하는 치료사를 지정해 질문할 수 있어요. 비용은 그 치료사 등급 비용의 ${DIRECT_COST_MULTIPLIER}배(최대 ${MAX_QUESTION_COST}토큰)이며, ${DIRECT_ANSWER_HOURS}시간 안에 답변이 없으면 전액 환불돼요.`],

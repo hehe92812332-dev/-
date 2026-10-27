@@ -6,6 +6,7 @@ import {
   DIRECT_ANSWER_HOURS,
   DIRECT_COST_MULTIPLIER,
   MAX_QUESTION_COST,
+  MIN_PURCHASE_TOKENS,
   MEMBERSHIP_PLANS,
   MIN_WITHDRAW_TOKENS,
   REVOKE_DAYS,
@@ -168,6 +169,7 @@ function refundPost(s: State, post: Post, reason: "no_answer" | "cancelled"): St
 export function purchase(s: State, userId: string, packageId: string, method: PaymentMethodId): Outcome {
   const pkg = TOKEN_PACKAGES.find((p) => p.id === packageId);
   if (!pkg) return fail("상품을 찾을 수 없습니다.");
+  if (pkg.tokens < MIN_PURCHASE_TOKENS) return fail(`최소 ${MIN_PURCHASE_TOKENS}토큰부터 충전할 수 있습니다.`);
   s = updateUser(s, userId, (u) => ({ ...u, wallet: addWallet(u.wallet, { cash: pkg.tokens, bonus: pkg.bonus }) }));
   s = addTx(s, {
     userId,

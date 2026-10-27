@@ -8,6 +8,7 @@ import { Checkout, type CheckoutItem } from "@/components/Checkout";
 import { Notice, TokenAmount, timeAgo } from "@/components/ui";
 import {
   MEMBERSHIP_PLANS,
+  MIN_PURCHASE_TOKENS,
   MIN_WITHDRAW_TOKENS,
   PAYMENT_METHODS,
   REVOKE_DAYS,
@@ -41,7 +42,7 @@ function WalletInner() {
   const store = useStore();
   const { currentUser, state, transactions } = store;
   const [tab, setTab] = useState<Tab>((params.get("tab") as Tab) || "buy");
-  const [pkg, setPkg] = useState<string>(TOKEN_PACKAGES[1].id);
+  const [pkg, setPkg] = useState<string>(TOKEN_PACKAGES[0].id);
   const [amount, setAmount] = useState(MIN_WITHDRAW_TOKENS);
   const [account, setAccount] = useState("");
   const [msg, setMsg] = useState<{ tone: "error" | "success"; text: string } | null>(null);
@@ -183,7 +184,7 @@ function WalletInner() {
             </div>
             <div className="mt-5 flex flex-col gap-3 rounded-xl bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-sm text-slate-600">
-                카드 · 카카오페이 · 네이버페이 · 토스페이 · 휴대폰 결제를 지원해요.
+                최소 {MIN_PURCHASE_TOKENS}토큰부터 충전할 수 있어요. 카드 · 카카오페이 · 네이버페이 · 토스페이 · 휴대폰 결제 지원.
                 {!plan && (
                   <button onClick={() => switchTab("membership")} className="ml-1 font-semibold text-violet-700 underline underline-offset-2">
                     멤버십이면 매달 할인!

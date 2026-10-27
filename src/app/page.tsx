@@ -132,7 +132,7 @@ export default function Home() {
         <p className="mt-2 text-slate-500">필요할 때만 충전하거나, 자주 묻는다면 멤버십으로 더 저렴하게.</p>
         <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { icon: Coins, color: "bg-amber-100 text-amber-600", title: "토큰 충전", desc: "필요한 만큼 충전, 많이 충전할수록 보너스 최대 12%.", href: "/wallet" },
+            { icon: Coins, color: "bg-amber-100 text-amber-600", title: "토큰 충전", desc: "300토큰부터 충전, 많이 충전할수록 보너스 최대 15%.", href: "/wallet" },
             { icon: Crown, color: "bg-violet-100 text-violet-600", title: "월 멤버십", desc: "매달 토큰 지급 + 모든 질문 최대 20% 할인.", href: "/wallet?tab=membership" },
             { icon: UserRoundCheck, color: "bg-sky-100 text-sky-600", title: "1:1 지정 질문", desc: "원하는 선생님께 직접. 48시간 무응답 시 자동 환불.", href: "/therapists" },
             { icon: Gift, color: "bg-rose-100 text-rose-500", title: "감사 팁", desc: "도움이 된 답변에 토큰으로 마음을 전하세요.", href: "/qa" },

@@ -13,7 +13,7 @@ import type { Board, ChatMessage, RatingScore, User } from "./types";
 
 export { balanceOf, userTier } from "./ledger";
 
-const STORAGE_KEY = "pt-bridge:v5";
+const STORAGE_KEY = "pt-bridge:v6";
 /** 데모에서 선택한 계정. 공유 데이터와 분리해 탭마다 다른 계정으로 채팅을 시험할 수 있게 합니다. */
 const ME_KEY = "pt-bridge:me";
 
