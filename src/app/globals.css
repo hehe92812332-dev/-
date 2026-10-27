@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo",
+    "Noto Sans KR", sans-serif;
+  --color-brand-50: #ecfdf8;
+  --color-brand-100: #d1faec;
+  --color-brand-200: #a7f3da;
+  --color-brand-300: #6ee7c3;
+  --color-brand-400: #34d3a6;
+  --color-brand-500: #10b98a;
+  --color-brand-600: #059673;
+  --color-brand-700: #04775e;
+  --color-brand-800: #065e4c;
+  --color-brand-900: #064e40;
+  --color-ink: #0f172a;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  @apply bg-slate-50 text-ink antialiased;
+  word-break: keep-all;
+}
+
+@utility card {
+  @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)];
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition
+    disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-brand-600 text-white hover:bg-brand-700;
+}
+@utility btn-dark {
+  @apply btn bg-ink text-white hover:bg-slate-800;
+}
+@utility btn-ghost {
+  @apply btn border border-slate-200 bg-white text-slate-700 hover:bg-slate-50;
+}
+
+@utility input {
+  @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none transition
+    placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-100;
+}
+
+@utility label {
+  @apply mb-1.5 block text-sm font-semibold text-slate-700;
+}
+
+@utility chip {
+  @apply inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600;
+}
