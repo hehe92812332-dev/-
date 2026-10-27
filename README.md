@@ -122,7 +122,7 @@ BASE_URL=http://localhost:3000 node scripts/e2e-server.cjs   # 서버 모드 종
    (관리자 지정에 이메일을 쓰려면 이메일 동의항목 필요 · 비즈 앱 전환)
 4. **네이버 개발자센터**: 애플리케이션 등록 → Callback `https://도메인/api/auth/callback/naver` → `AUTH_NAVER_ID/SECRET`
 5. **토스페이먼츠**: 개발자센터 테스트 키로 결제·취소·정기결제를 확인 → 가맹점 계약·심사 후 라이브 키로 교체. 정기결제(빌링)는 별도 계약이 필요합니다.
-6. **크론**: `vercel.json`이 10분마다 `/api/cron/sweep`을 호출합니다 (`CRON_SECRET`) — 기한 정산, 자동 등급 낮추기, 블라인드 평가 공개, 멤버십 갱신, 알림. 다른 호스팅에서는 외부 크론으로 `Authorization: Bearer <CRON_SECRET>` 헤더를 붙여 호출하세요.
+6. **크론**: Vercel **Pro 이상** 필요(무료 플랜은 하루 1회만 허용해 배포 실패). `vercel.json`이 서울 리전(`icn1`)에서 10분마다 `/api/cron/sweep`을 호출합니다 (`CRON_SECRET`) — 기한 정산, 자동 등급 낮추기, 블라인드 평가 공개, 멤버십 갱신, 알림. 다른 호스팅에서는 외부 크론으로 `Authorization: Bearer <CRON_SECRET>` 헤더를 붙여 호출하세요.
 7. **서류 저장소**: 운영에서는 `STORAGE_DRIVER=s3`와 S3 호환 저장소(AWS S3, Cloudflare R2, Supabase Storage 등) 정보를 넣으세요. 넣지 않으면 DB에 저장됩니다.
 8. **DB 연결 수**: 서버리스는 인스턴스마다 연결 풀을 만들므로 PgBouncer/Neon·Supabase 풀러 주소를 `DATABASE_URL`로 쓰세요. 자체 서버는 `npm run start:cluster`(코어 수만큼 프로세스)로 실행하세요.
 9. `ADMIN_EMAILS`에 운영자 이메일을 넣고 그 계정으로 로그인하면 `/admin`이 열립니다.
@@ -133,6 +133,8 @@ BASE_URL=http://localhost:3000 node scripts/e2e-server.cjs   # 서버 모드 종
 ---
 
 ## 출시 전 체크리스트 (코드 밖에서 해야 할 일)
+
+> 순서·준비물·환경변수까지 단계별로 정리한 문서: **[운영 준비 가이드](docs/launch-guide.md)**
 
 - [ ] 사업자등록, **통신판매업 신고**, 푸터의 사업자 정보 교체
 - [ ] **토스페이먼츠 가맹점 계약** (의료·건강 상담 관련 업종이라 심사가 까다로울 수 있으니 서비스 성격을 정확히 설명) + 정기결제 계약

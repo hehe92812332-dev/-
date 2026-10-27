@@ -71,15 +71,16 @@ export const GET = handle(async () => {
     .innerJoin(users, eq(users.id, orders.userId))
     .orderBy(desc(orders.createdAt))
     .limit(50);
-  const [stats] = await db.execute<{ users: string; posts: string; paid: string | null; refunded: string | null }>(sql`
+  const [stats] = await db.execute<{ users: string; posts: string; paid: string | null; refunded: string | null; balance: string | null }>(sql`
     select (select count(*) from users where role is not null) as users,
+           (select sum(cash) from users) as balance,
            (select count(*) from posts) as posts,
            (select sum(amount) from payment_orders where status = 'paid') as paid,
            (select sum(amount) from payment_orders where status = 'canceled' and payment_key is not null) as refunded`).then((r) => r.rows);
   const logs = await db.select().from(schema.adminLogs).orderBy(desc(schema.adminLogs.createdAt)).limit(30);
 
   return NextResponse.json({
-    stats: { users: Number(stats.users), posts: Number(stats.posts), paidKrw: Number(stats.paid ?? 0), refundedKrw: Number(stats.refunded ?? 0) },
+    stats: { users: Number(stats.users), posts: Number(stats.posts), paidKrw: Number(stats.paid ?? 0), refundedKrw: Number(stats.refunded ?? 0), prepaidKrw: Number(stats.balance ?? 0) * TOKEN_KRW },
     pending: pending.map(({ p, name, email }) => ({
       userId: p.userId,
       name,

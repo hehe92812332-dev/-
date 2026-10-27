@@ -10,7 +10,7 @@ import { tierFor } from "@/lib/tier";
 import { GemIcon } from "@/components/ui";
 
 interface Overview {
-  stats: { users: number; posts: number; paidKrw: number; refundedKrw: number };
+  stats: { users: number; posts: number; paidKrw: number; refundedKrw: number; prepaidKrw: number };
   pending: {
     userId: string;
     name: string;
@@ -110,12 +110,14 @@ export default function AdminPage() {
       </div>
 
       {data && (
-        <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-5">
           {[
             ["가입 회원", `${data.stats.users.toLocaleString()}명`],
             ["질문", `${data.stats.posts.toLocaleString()}건`],
             ["결제 금액", `${data.stats.paidKrw.toLocaleString()}원`],
             ["환불 금액", `${data.stats.refundedKrw.toLocaleString()}원`],
+            // 전자금융거래법 선불업 등록 기준(발행잔액) 확인용 — 보너스·획득 토큰은 제외한 현금 충전분
+            ["미사용 충전 잔액", `${data.stats.prepaidKrw.toLocaleString()}원`],
           ].map(([k, v]) => (
             <div key={k} className="card p-4">
               <div className="text-xs text-slate-500">{k}</div>
