@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Building2, GraduationCap, ShieldCheck, Timer } from "lucide-react";
+import { BookOpenCheck, Building2, GraduationCap, ShieldCheck, Timer } from "lucide-react";
 import { Avatar, TierBadge } from "@/components/ui";
-import { CATEGORIES, HOSPITAL_TYPES } from "@/lib/config";
+import { CATEGORIES, DEGREES, HOSPITAL_TYPES } from "@/lib/config";
 import { userTier, useStore } from "@/lib/store";
-import { calcScore } from "@/lib/tier";
+import { tierRank } from "@/lib/tier";
 import { quoteQuestion } from "@/lib/ledger";
 
 export default function TherapistsPage() {
@@ -15,7 +15,7 @@ export default function TherapistsPage() {
 
   const therapists = users
     .filter((u) => u.therapist && (spec === "전체" || u.therapist.specialties.includes(spec as (typeof CATEGORIES)[number])))
-    .sort((a, b) => calcScore(b.therapist!).total - calcScore(a.therapist!).total);
+    .sort((a, b) => tierRank(userTier(b)!.id) - tierRank(userTier(a)!.id) || b.therapist!.experienceYears - a.therapist!.experienceYears);
 
   const adoptedCount = (id: string) =>
     posts.filter((p) => p.adoptedAnswerId && p.answers.find((a) => a.id === p.adoptedAnswerId)?.authorId === id).length;
@@ -43,7 +43,6 @@ export default function TherapistsPage() {
         {therapists.map((u) => {
           const t = u.therapist!;
           const tier = userTier(u)!;
-          const score = calcScore(t).total;
           return (
             <div key={u.id} className="card flex flex-col p-5">
               <div className="flex items-center gap-3">
@@ -53,9 +52,8 @@ export default function TherapistsPage() {
                     {u.name}
                     {t.licenseVerified && <ShieldCheck className="size-4 text-brand-600" aria-label="면허 인증" />}
                   </div>
-                  <div className="mt-1 flex items-center gap-2">
-                    <TierBadge tier={tier.id} />
-                    <span className="text-xs text-slate-400">{score}점</span>
+                  <div className="mt-1">
+                    <TierBadge tier={tier.id} showGrade />
                   </div>
                 </div>
               </div>
@@ -68,7 +66,10 @@ export default function TherapistsPage() {
                   <Timer className="size-3.5" /> 임상 경력 {t.experienceYears}년
                 </li>
                 <li className="flex items-center gap-1.5">
-                  <GraduationCap className="size-3.5" /> 교육 이수 {t.educationHours}시간
+                  <BookOpenCheck className="size-3.5" /> 학회 인정 교육 {t.educationHours}시간
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <GraduationCap className="size-3.5" /> {DEGREES[t.degree]}
                 </li>
               </ul>
               <div className="mt-4 flex flex-wrap gap-1.5">

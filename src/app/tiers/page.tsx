@@ -1,60 +1,117 @@
 "use client";
 
 import { useState } from "react";
-import { GraduationCap, Hospital, Timer } from "lucide-react";
-import { TierBadge, TokenAmount } from "@/components/ui";
+import { BookOpenCheck, GraduationCap, Timer } from "lucide-react";
+import { GemIcon, TierBadge, TokenAmount } from "@/components/ui";
 import {
   ADOPT_DEADLINE_DAYS,
+  DEGREES,
   DIRECT_ANSWER_HOURS,
   DIRECT_COST_MULTIPLIER,
-  HOSPITAL_TYPES,
-  REVOKE_DAYS,
-  SETTLEMENT_HOLD_DAYS,
   MIN_WITHDRAW_TOKENS,
-  SCORE_RULES,
+  REVOKE_DAYS,
   SETTLEMENT_FEE_RATE,
+  SETTLEMENT_HOLD_DAYS,
   TIERS,
   TOKEN_KRW,
   WITHHOLDING_TAX_RATE,
-  type HospitalType,
+  type Degree,
+  type Tier,
 } from "@/lib/config";
-import { calcScore, nextTier, tierForScore } from "@/lib/tier";
+import { gradeLabel, missingFor, nextTier, tierFor } from "@/lib/tier";
+
+/** 경력·교육 구간별로 [학위 있음, 학위 없음] 등급을 묶은 표 (위가 상위) */
+const BANDS = [...new Set(TIERS.filter((t) => t.grade).map((t) => t.minYears))]
+  .sort((a, b) => b - a)
+  .map((years) => {
+    const pair = TIERS.filter((t) => t.grade && t.minYears === years);
+    return { years, hours: pair[0].minHours, withDegree: pair.find((t) => t.needsDegree)!, without: pair.find((t) => !t.needsDegree)! };
+  });
+
+function GemCell({ tier, active }: { tier: Tier; active: boolean }) {
+  return (
+    <div
+      className={`flex min-w-0 flex-col items-center gap-1.5 rounded-2xl border-2 p-2.5 text-center transition sm:flex-row sm:gap-3 sm:p-3 sm:text-left md:p-4 ${active ? "shadow-md" : "border-transparent bg-slate-50"}`}
+      style={active ? { borderColor: tier.colors[0], backgroundColor: `${tier.colors[0]}1a` } : undefined}
+    >
+      <GemIcon tier={tier.id} className="size-8 shrink-0 md:size-11" />
+      <div className="min-w-0">
+        <div className="text-[11px] font-semibold text-slate-400">{gradeLabel(tier)}</div>
+        <div className="truncate text-sm font-extrabold sm:text-base" style={{ color: tier.text }}>
+          {tier.name}
+        </div>
+        <div className="mt-0.5 text-xs text-slate-500">
+          질문 <b className="text-amber-600">{tier.questionCost}</b>토큰
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function TiersPage() {
   const [years, setYears] = useState(5);
-  const [hours, setHours] = useState(120);
-  const [hospital, setHospital] = useState<HospitalType>("hospital");
-  const score = calcScore({ experienceYears: years, educationHours: hours, hospitalType: hospital });
-  const tier = tierForScore(score.total);
+  const [hours, setHours] = useState(300);
+  const [degree, setDegree] = useState<Degree>("none");
+  const input = { experienceYears: years, educationHours: hours, degree };
+  const tier = tierFor(input);
   const next = nextTier(tier.id);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:py-12">
-      <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">등급 · 토큰 안내</h1>
-      <p className="mt-2 text-slate-500">치료사 등급은 100점 만점 점수로 산정되며, 정보가 갱신될 때마다 자동으로 다시 계산됩니다.</p>
+      <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">보석 등급 안내</h1>
+      <p className="mt-2 text-slate-500">
+        치료사 등급은 1등급 다이아몬드부터 8등급 진주까지 8단계입니다. 세 가지 조건을 <b>모두</b> 충족한 가장 높은 등급이
+        부여되며, 같은 경력·교육 구간에서는 석·박사 학위가 있으면 한 단계 위 보석이 됩니다.
+      </p>
 
-      <div className="mt-8 grid gap-4 md:grid-cols-3">
+      <div className="mt-8 grid gap-3 md:grid-cols-3">
         {[
-          { icon: Timer, title: "임상 경력", max: SCORE_RULES.experienceMax, rule: `1년당 ${SCORE_RULES.experiencePerYear}점` },
-          { icon: GraduationCap, title: "교육 이수 시간", max: SCORE_RULES.educationMax, rule: `보수·학회 교육 ${SCORE_RULES.educationHoursPerPoint}시간당 1점` },
-          { icon: Hospital, title: "근무 기관 종류", max: 30, rule: "기관 종류별 15~30점" },
-        ].map(({ icon: Icon, title, max, rule }) => (
-          <div key={title} className="card p-5">
-            <Icon className="size-6 text-brand-600" />
-            <div className="mt-3 font-bold">{title}</div>
-            <div className="mt-1 text-sm text-slate-500">{rule}</div>
-            <div className="mt-3 text-2xl font-extrabold">
-              최대 {max}
-              <span className="text-base font-semibold text-slate-400">점</span>
+          { icon: Timer, title: "임상 경력", desc: "면허 취득 후 물리치료사로 근무한 기간 (3 · 5 · 10 · 15년 이상)" },
+          { icon: BookOpenCheck, title: "학회 인정 교육", desc: "물리치료학회에서 인정하는 교육 이수 시간 (200 · 300 · 400 · 500시간 이상)" },
+          { icon: GraduationCap, title: "석사 · 박사 학위", desc: "같은 구간 안에서 학위 보유 시 한 단계 상위 보석" },
+        ].map(({ icon: Icon, title, desc }) => (
+          <div key={title} className="card flex gap-4 p-5">
+            <Icon className="size-6 shrink-0 text-brand-600" />
+            <div>
+              <div className="font-bold">{title}</div>
+              <p className="mt-1 text-sm text-slate-500">{desc}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Calculator */}
+      {/* 등급 매트릭스 */}
+      <div className="card mt-6 overflow-hidden">
+        <div className="grid grid-cols-[64px_minmax(0,1fr)_minmax(0,1fr)] gap-2 border-b border-slate-100 bg-slate-50 px-3 py-3 text-xs font-bold text-slate-500 md:grid-cols-[180px_minmax(0,1fr)_minmax(0,1fr)] md:px-5">
+          <span>경력 · 교육</span>
+          <span>석사 · 박사</span>
+          <span>학위 없음</span>
+        </div>
+        <div className="space-y-2 p-3 md:p-5">
+          {BANDS.map((b) => (
+            <div key={b.years} className="grid grid-cols-[64px_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2 md:grid-cols-[180px_minmax(0,1fr)_minmax(0,1fr)]">
+              <div className="text-xs md:text-sm">
+                <div className="font-extrabold">{b.years}년+</div>
+                <div className="text-[11px] text-slate-500 md:text-xs">교육 {b.hours}h+</div>
+              </div>
+              <GemCell tier={b.withDegree} active={tier.id === b.withDegree.id} />
+              <GemCell tier={b.without} active={tier.id === b.without.id} />
+            </div>
+          ))}
+          <div className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-2 md:grid-cols-[180px_1fr]">
+            <div className="text-sm">
+              <div className="font-extrabold">그 외</div>
+              <div className="text-xs text-slate-500">면허 인증 회원</div>
+            </div>
+            <GemCell tier={TIERS[0]} active={tier.id === TIERS[0].id} />
+          </div>
+        </div>
+      </div>
+
+      {/* 계산기 */}
       <div className="card mt-6 grid gap-8 p-6 md:grid-cols-2 md:p-8">
         <div className="space-y-6">
-          <h2 className="text-lg font-bold">내 등급 미리 계산하기</h2>
+          <h2 className="text-lg font-bold">내 보석 등급 확인하기</h2>
           <div>
             <div className="flex justify-between text-sm font-semibold">
               <span>임상 경력</span>
@@ -64,68 +121,64 @@ export default function TiersPage() {
           </div>
           <div>
             <div className="flex justify-between text-sm font-semibold">
-              <span>교육 이수 시간</span>
+              <span>학회 인정 교육</span>
               <span className="text-brand-700">{hours}시간</span>
             </div>
-            <input type="range" min={0} max={500} step={10} value={hours} onChange={(e) => setHours(+e.target.value)} className="mt-2 w-full accent-brand-600" />
+            <input type="range" min={0} max={800} step={10} value={hours} onChange={(e) => setHours(+e.target.value)} className="mt-2 w-full accent-brand-600" />
           </div>
           <div>
-            <label className="label">근무 기관</label>
-            <select className="input" value={hospital} onChange={(e) => setHospital(e.target.value as HospitalType)}>
-              {Object.entries(HOSPITAL_TYPES).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v.label} ({v.points}점)
-                </option>
+            <div className="label">최종 학위</div>
+            <div className="grid grid-cols-3 gap-2">
+              {(Object.keys(DEGREES) as Degree[]).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setDegree(d)}
+                  className={`rounded-xl py-2.5 text-sm font-semibold ${degree === d ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600"}`}
+                >
+                  {DEGREES[d]}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
         </div>
-        <div className="flex flex-col justify-center rounded-2xl bg-slate-50 p-6">
-          <div className="text-sm text-slate-500">예상 점수</div>
-          <div className="mt-1 text-5xl font-extrabold tracking-tight">{score.total}</div>
-          <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-200">
-            <div className="h-full rounded-full transition-all" style={{ width: `${score.total}%`, backgroundColor: tier.color }} />
+        <div
+          className="flex flex-col items-center justify-center rounded-2xl p-6 text-center"
+          style={{ background: `linear-gradient(135deg, ${tier.colors[0]}26, ${tier.colors[1]}1a)` }}
+        >
+          <GemIcon tier={tier.id} className="size-20 drop-shadow-lg" />
+          <div className="mt-3 text-sm font-semibold text-slate-500">{gradeLabel(tier)}</div>
+          <div className="text-3xl font-extrabold tracking-tight" style={{ color: tier.text }}>
+            {tier.name}
           </div>
-          <div className="mt-2 flex gap-3 text-xs text-slate-500">
-            <span>경력 {score.experience}</span>
-            <span>교육 {score.education}</span>
-            <span>기관 {score.hospital}</span>
-          </div>
-          <div className="mt-6 flex items-center gap-2">
-            <TierBadge tier={tier.id} size="md" />
-            <span className="text-sm text-slate-600">
-              질문 1건 답변 시 최대 <TokenAmount value={Math.floor(tier.questionCost * (1 - SETTLEMENT_FEE_RATE))} /> 획득
-            </span>
+          <div className="mt-3 text-sm text-slate-600">
+            답변 채택 시 최대 <TokenAmount value={Math.floor(tier.questionCost * (1 - SETTLEMENT_FEE_RATE))} /> 획득
           </div>
           {next && (
-            <p className="mt-3 text-xs text-slate-500">
-              {next.name}까지 {next.minScore - score.total}점 남았어요.
+            <p className="mt-3 rounded-full bg-white/70 px-3 py-1 text-xs text-slate-600">
+              <b style={{ color: next.text }}>{next.name}</b>까지 {missingFor(next, input).join(" · ")} 필요
             </p>
           )}
         </div>
       </div>
 
-      {/* Tier table */}
+      {/* 등급표 */}
       <div className="card mt-6 overflow-x-auto">
-        <table className="w-full min-w-[560px] text-sm">
+        <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-slate-50 text-left text-xs text-slate-500">
             <tr>
               <th className="px-5 py-3">등급</th>
-              <th className="px-5 py-3">필요 점수</th>
+              <th className="px-5 py-3">조건 (모두 충족)</th>
               <th className="px-5 py-3">질문 비용</th>
               <th className="px-5 py-3">채택 시 답변자 수령</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {TIERS.map((t, i) => (
+            {[...TIERS].reverse().map((t) => (
               <tr key={t.id}>
                 <td className="px-5 py-3.5">
                   <TierBadge tier={t.id} size="md" />
                 </td>
-                <td className="px-5 py-3.5 tabular-nums">
-                  {t.minScore}
-                  {TIERS[i + 1] ? `~${TIERS[i + 1].minScore - 1}` : "+"}점
-                </td>
+                <td className="px-5 py-3.5 text-slate-600">{t.description}</td>
                 <td className="px-5 py-3.5">
                   <TokenAmount value={t.questionCost} />{" "}
                   <span className="text-xs text-slate-400">({(t.questionCost * TOKEN_KRW).toLocaleString()}원)</span>

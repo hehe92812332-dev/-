@@ -7,9 +7,9 @@ import { ArrowLeft, Info, UserRoundCheck, X } from "lucide-react";
 import { ADOPT_DEADLINE_DAYS, CATEGORIES, DIRECT_ANSWER_HOURS, TIERS, type Category, type TierId } from "@/lib/config";
 import { quoteQuestion } from "@/lib/ledger";
 import { balanceOf, userTier, useStore } from "@/lib/store";
-import { tierRank } from "@/lib/tier";
+import { gradeLabel, tierRank } from "@/lib/tier";
 import type { Board } from "@/lib/types";
-import { Notice, TierBadge, TokenAmount, UserLine } from "./ui";
+import { GemIcon, Notice, TokenAmount, UserLine } from "./ui";
 
 function AskFormInner({ board }: { board: Board }) {
   const router = useRouter();
@@ -19,7 +19,7 @@ function AskFormInner({ board }: { board: Board }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [category, setCategory] = useState<Category>(CATEGORIES[0]);
-  const [targetTier, setTargetTier] = useState<TierId>("pro");
+  const [targetTier, setTargetTier] = useState<TierId>("topaz");
   const [directId, setDirectId] = useState<string | undefined>(() => {
     const to = params.get("to");
     return to && getUser(to)?.therapist ? to : undefined;
@@ -137,21 +137,24 @@ function AskFormInner({ board }: { board: Board }) {
               </Link>
             </div>
             <p className="mt-1 text-sm text-slate-500">선택한 등급 이상의 치료사만 답변할 수 있어요. 등급이 높을수록 토큰이 더 듭니다.</p>
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
-              {TIERS.map((t) => (
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {[...TIERS].reverse().map((t) => (
                 <button
                   type="button"
                   key={t.id}
                   onClick={() => setTargetTier(t.id)}
-                  className={`rounded-xl border-2 p-3 text-left transition ${
+                  className={`flex items-center gap-3 rounded-xl border-2 p-3 text-left transition ${
                     targetTier === t.id ? "border-brand-500 bg-brand-50/50" : "border-slate-200 hover:border-slate-300"
                   }`}
                 >
-                  <TierBadge tier={t.id} />
-                  <div className="mt-2">
-                    <TokenAmount value={t.questionCost} />
+                  <GemIcon tier={t.id} className="size-8 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold" style={{ color: t.text }}>
+                      {t.name} <span className="text-[11px] font-semibold text-slate-400">{gradeLabel(t)}</span>
+                    </div>
+                    <TokenAmount value={t.questionCost} className="text-sm" />
+                    <div className="text-[11px] text-slate-400">답변 가능 {eligibleCount(t.id)}명</div>
                   </div>
-                  <div className="mt-0.5 text-[11px] text-slate-400">답변 가능 {eligibleCount(t.id)}명</div>
                 </button>
               ))}
             </div>

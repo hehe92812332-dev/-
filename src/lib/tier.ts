@@ -1,35 +1,20 @@
-import { HOSPITAL_TYPES, SCORE_RULES, TIERS, type HospitalType, type Tier, type TierId } from "./config";
+import { TIERS, type Degree, type Tier, type TierId } from "./config";
 
-export interface ScoreInput {
+export interface TierInput {
   experienceYears: number;
+  /** 물리치료학회 인정 교육 이수 시간 */
   educationHours: number;
-  hospitalType: HospitalType;
+  degree: Degree;
 }
 
-export interface ScoreBreakdown {
-  experience: number;
-  education: number;
-  hospital: number;
-  total: number;
+export function meetsTier(t: Tier, { experienceYears, educationHours, degree }: TierInput) {
+  return experienceYears >= t.minYears && educationHours >= t.minHours && (!t.needsDegree || degree !== "none");
 }
 
-export function calcScore({ experienceYears, educationHours, hospitalType }: ScoreInput): ScoreBreakdown {
-  const experience = Math.min(
-    Math.max(0, experienceYears) * SCORE_RULES.experiencePerYear,
-    SCORE_RULES.experienceMax,
-  );
-  const education = Math.min(
-    Math.floor(Math.max(0, educationHours) / SCORE_RULES.educationHoursPerPoint),
-    SCORE_RULES.educationMax,
-  );
-  const hospital = HOSPITAL_TYPES[hospitalType]?.points ?? 0;
-  return { experience, education, hospital, total: experience + education + hospital };
-}
-
-export function tierForScore(score: number): Tier {
-  let result = TIERS[0];
-  for (const t of TIERS) if (score >= t.minScore) result = t;
-  return result;
+/** 조건을 모두 충족하는 가장 높은 등급 */
+export function tierFor(input: TierInput): Tier {
+  for (let i = TIERS.length - 1; i >= 0; i--) if (meetsTier(TIERS[i], input)) return TIERS[i];
+  return TIERS[0];
 }
 
 export function getTier(id: TierId): Tier {
@@ -42,4 +27,17 @@ export function tierRank(id: TierId): number {
 
 export function nextTier(id: TierId): Tier | undefined {
   return TIERS[tierRank(id) + 1];
+}
+
+export function gradeLabel(t: Tier) {
+  return t.grade ? `${t.grade}등급` : "등급 외";
+}
+
+/** 다음 등급까지 부족한 조건 */
+export function missingFor(t: Tier, input: TierInput) {
+  const out: string[] = [];
+  if (input.experienceYears < t.minYears) out.push(`경력 ${t.minYears - input.experienceYears}년`);
+  if (input.educationHours < t.minHours) out.push(`교육 ${t.minHours - input.educationHours}시간`);
+  if (t.needsDegree && input.degree === "none") out.push("석·박사 학위");
+  return out;
 }

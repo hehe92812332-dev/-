@@ -92,77 +92,155 @@ export type HospitalType =
   | "sports"
   | "korean";
 
-export const HOSPITAL_TYPES: Record<HospitalType, { label: string; points: number }> = {
-  tertiary: { label: "상급종합병원", points: 30 },
-  general: { label: "종합병원", points: 25 },
-  rehab: { label: "재활전문병원", points: 25 },
-  hospital: { label: "병원", points: 20 },
-  nursing: { label: "요양병원", points: 15 },
-  clinic: { label: "의원 (정형외과·재활의학과 등)", points: 15 },
-  sports: { label: "스포츠·재활센터", points: 15 },
-  korean: { label: "한방병원", points: 15 },
+/** 근무 기관 (프로필 표시용, 등급 산정에는 쓰지 않음) */
+export const HOSPITAL_TYPES: Record<HospitalType, { label: string }> = {
+  tertiary: { label: "상급종합병원" },
+  general: { label: "종합병원" },
+  rehab: { label: "재활전문병원" },
+  hospital: { label: "병원" },
+  nursing: { label: "요양병원" },
+  clinic: { label: "의원 (정형외과·재활의학과 등)" },
+  sports: { label: "스포츠·재활센터" },
+  korean: { label: "한방병원" },
 };
 
-/** 점수 산정 방식: 경력 최대 40점 + 교육시간 최대 30점 + 근무기관 최대 30점 = 100점 */
-export const SCORE_RULES = {
-  experiencePerYear: 2,
-  experienceMax: 40,
-  educationHoursPerPoint: 10,
-  educationMax: 30,
+export type Degree = "none" | "master" | "doctor";
+
+export const DEGREES: Record<Degree, string> = {
+  none: "학사·전문학사",
+  master: "석사",
+  doctor: "박사",
 };
 
-export type TierId = "rookie" | "pro" | "expert" | "master" | "legend";
+export type TierId = "rough" | "pearl" | "opal" | "topaz" | "amethyst" | "emerald" | "sapphire" | "ruby" | "diamond";
 
 export interface Tier {
   id: TierId;
+  /** 1(최상위) ~ 8. 원석은 등급 외 */
+  grade: number | null;
   name: string;
-  minScore: number;
+  /** 등급 조건: 임상 경력(년), 물리치료학회 인정 교육 시간, 석사·박사 학위 필요 여부 */
+  minYears: number;
+  minHours: number;
+  needsDegree: boolean;
   /** 이 등급 이상의 치료사에게 질문할 때 드는 토큰 */
   questionCost: number;
-  color: string;
+  /** 배지 그라데이션 [시작, 끝] — 보석 색 */
+  colors: [string, string];
+  /** 밝은 배경 위 글자색 */
+  text: string;
   description: string;
 }
 
+/** 낮은 등급 → 높은 등급 순. 조건은 경력·교육시간·학위를 모두 충족해야 합니다. */
 export const TIERS: Tier[] = [
   {
-    id: "rookie",
-    name: "루키",
-    minScore: 0,
+    id: "rough",
+    text: "#475569",
+    grade: null,
+    name: "원석",
+    minYears: 0,
+    minHours: 0,
+    needsDegree: false,
     questionCost: 10,
-    color: "#64748b",
-    description: "면허 인증을 마친 신규 치료사",
+    colors: ["#94a3b8", "#64748b"],
+    description: "면허 인증 완료, 8등급 조건을 향해 다듬어지는 중",
   },
   {
-    id: "pro",
-    name: "프로",
-    minScore: 30,
+    id: "pearl",
+    text: "#78716c",
+    grade: 8,
+    name: "진주",
+    minYears: 3,
+    minHours: 200,
+    needsDegree: false,
+    questionCost: 15,
+    colors: ["#cbd5e1", "#a8a29e"],
+    description: "경력 3년 + 학회 인정 교육 200시간",
+  },
+  {
+    id: "opal",
+    text: "#0e7490",
+    grade: 7,
+    name: "오팔",
+    minYears: 3,
+    minHours: 200,
+    needsDegree: true,
     questionCost: 20,
-    color: "#0ea5e9",
-    description: "임상 경험을 쌓아가는 치료사",
+    colors: ["#f9a8d4", "#67e8f9"],
+    description: "경력 3년 + 교육 200시간 + 석·박사",
   },
   {
-    id: "expert",
-    name: "엑스퍼트",
-    minScore: 50,
-    questionCost: 35,
-    color: "#10b981",
-    description: "전문 분야를 갖춘 숙련 치료사",
+    id: "topaz",
+    text: "#c2410c",
+    grade: 6,
+    name: "토파즈",
+    minYears: 5,
+    minHours: 300,
+    needsDegree: false,
+    questionCost: 30,
+    colors: ["#fbbf24", "#ea580c"],
+    description: "경력 5년 + 교육 300시간",
   },
   {
-    id: "master",
-    name: "마스터",
-    minScore: 70,
-    questionCost: 60,
-    color: "#8b5cf6",
-    description: "풍부한 경력과 교육 이수를 갖춘 치료사",
+    id: "amethyst",
+    text: "#7e22ce",
+    grade: 5,
+    name: "자수정",
+    minYears: 5,
+    minHours: 300,
+    needsDegree: true,
+    questionCost: 40,
+    colors: ["#c084fc", "#7e22ce"],
+    description: "경력 5년 + 교육 300시간 + 석·박사",
   },
   {
-    id: "legend",
-    name: "레전드",
-    minScore: 85,
-    questionCost: 100,
-    color: "#f59e0b",
-    description: "최상위 임상 전문가",
+    id: "emerald",
+    text: "#047857",
+    grade: 4,
+    name: "에메랄드",
+    minYears: 10,
+    minHours: 400,
+    needsDegree: false,
+    questionCost: 55,
+    colors: ["#34d399", "#047857"],
+    description: "경력 10년 + 교육 400시간",
+  },
+  {
+    id: "sapphire",
+    text: "#1d4ed8",
+    grade: 3,
+    name: "사파이어",
+    minYears: 10,
+    minHours: 400,
+    needsDegree: true,
+    questionCost: 70,
+    colors: ["#60a5fa", "#1d4ed8"],
+    description: "경력 10년 + 교육 400시간 + 석·박사",
+  },
+  {
+    id: "ruby",
+    text: "#be123c",
+    grade: 2,
+    name: "루비",
+    minYears: 15,
+    minHours: 500,
+    needsDegree: false,
+    questionCost: 90,
+    colors: ["#fb7185", "#be123c"],
+    description: "경력 15년 + 교육 500시간",
+  },
+  {
+    id: "diamond",
+    text: "#4f46e5",
+    grade: 1,
+    name: "다이아몬드",
+    minYears: 15,
+    minHours: 500,
+    needsDegree: true,
+    questionCost: 120,
+    colors: ["#a5f3fc", "#6366f1"],
+    description: "경력 15년 + 교육 500시간 + 석·박사",
   },
 ];
 

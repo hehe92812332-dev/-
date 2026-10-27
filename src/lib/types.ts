@@ -1,11 +1,13 @@
-import type { Category, HospitalType, MembershipPlanId, PaymentMethodId, TierId } from "./config";
+import type { Category, Degree, HospitalType, MembershipPlanId, PaymentMethodId, TierId } from "./config";
 
 export type Role = "therapist" | "patient";
 
 export interface TherapistProfile {
   licenseVerified: boolean;
   experienceYears: number;
+  /** 물리치료학회 인정 교육 이수 시간 */
   educationHours: number;
+  degree: Degree;
   hospitalType: HospitalType;
   hospitalName: string;
   specialties: Category[];

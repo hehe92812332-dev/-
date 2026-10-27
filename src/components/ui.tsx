@@ -6,16 +6,46 @@ import { getTier } from "@/lib/tier";
 import { userTier } from "@/lib/store";
 import type { User } from "@/lib/types";
 
-export function TierBadge({ tier, size = "sm" }: { tier: TierId; size?: "sm" | "md" }) {
+/** 등급별 보석 아이콘. 진주는 구슬, 원석은 다듬어지지 않은 돌 모양 */
+export function GemIcon({ tier, className = "size-3.5" }: { tier: TierId; className?: string }) {
+  const t = getTier(tier);
+  const id = `gem-${t.id}`;
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor={t.colors[0]} />
+          <stop offset="1" stopColor={t.colors[1]} />
+        </linearGradient>
+      </defs>
+      {t.id === "pearl" ? (
+        <>
+          <circle cx="12" cy="12" r="9" fill={`url(#${id})`} />
+          <circle cx="9" cy="8.5" r="2.6" fill="#fff" opacity=".7" />
+        </>
+      ) : t.id === "rough" ? (
+        <path d="M5 9l5-5 7 2 3 7-4 7-8-1-4-5z" fill={`url(#${id})`} />
+      ) : (
+        <>
+          <path d="M7 3h10l5 6-10 12L2 9z" fill={`url(#${id})`} />
+          <path d="M2 9h20M7 3l5 18M17 3l-5 18M7 3l2 6M17 3l-2 6" stroke="#fff" strokeOpacity=".45" strokeWidth="1" fill="none" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+export function TierBadge({ tier, size = "sm", showGrade }: { tier: TierId; size?: "sm" | "md"; showGrade?: boolean }) {
   const t = getTier(tier);
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full font-bold ${
+      className={`inline-flex items-center gap-1 rounded-full font-bold ring-1 ring-inset ${
         size === "md" ? "px-3 py-1 text-sm" : "px-2 py-0.5 text-[11px]"
       }`}
-      style={{ color: t.color, backgroundColor: `${t.color}1a` }}
+      style={{ color: t.text, backgroundColor: `${t.colors[0]}26`, ["--tw-ring-color" as string]: `${t.colors[0]}66` }}
     >
-      <span className="size-1.5 rounded-full" style={{ backgroundColor: t.color }} />
+      <GemIcon tier={tier} className={size === "md" ? "size-4" : "size-3.5"} />
+      {(showGrade ?? size === "md") && t.grade && <span className="opacity-70">{t.grade}등급</span>}
       {t.name}
     </span>
   );

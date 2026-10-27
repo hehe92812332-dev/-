@@ -52,7 +52,7 @@ export default function Home() {
             직접.
           </h1>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-600 md:text-lg">
-            경력·교육시간·근무기관으로 검증된 등급의 치료사에게 질문하세요. 치료사끼리는 임상 케이스를 나누고, 좋은 답변은
+            경력·학회 인정 교육·학위로 검증된 보석 등급의 치료사에게 질문하세요. 치료사끼리는 임상 케이스를 나누고, 좋은 답변은
             토큰으로 보상받습니다.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -159,18 +159,18 @@ export default function Home() {
           <div className="grid md:grid-cols-[1fr_1.4fr]">
             <div className="bg-ink p-7 text-white md:p-10">
               <BadgeCheck className="size-8 text-brand-400" />
-              <h2 className="mt-4 text-2xl font-extrabold tracking-tight">검증된 등급제</h2>
+              <h2 className="mt-4 text-2xl font-extrabold tracking-tight">8단계 보석 등급</h2>
               <p className="mt-3 text-sm leading-relaxed text-slate-300">
-                임상 경력, 보수·학회 교육 이수 시간, 근무 기관 종류를 점수화해 5단계 등급을 부여합니다. 등급이 높을수록 질문
-                비용과 답변 보상이 커집니다.
+                임상 경력, 물리치료학회 인정 교육 시간, 석·박사 학위를 기준으로 1등급 다이아몬드부터 8등급 진주까지 나눕니다.
+                등급이 높을수록 질문 비용과 답변 보상이 커집니다.
               </p>
               <Link href="/tiers" className="btn mt-6 bg-white text-ink hover:bg-slate-100">
-                내 등급 계산해 보기
+                내 보석 등급 확인하기
               </Link>
             </div>
             <ul className="divide-y divide-slate-100">
-              {TIERS.map((t) => (
-                <li key={t.id} className="flex items-center gap-4 px-6 py-4">
+              {[...TIERS].reverse().map((t) => (
+                <li key={t.id} className="flex items-center gap-4 px-6 py-3">
                   <TierBadge tier={t.id} size="md" />
                   <span className="hidden text-sm text-slate-500 sm:block">{t.description}</span>
                   <span className="ml-auto text-sm">

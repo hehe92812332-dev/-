@@ -4,9 +4,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { HeartPulse, Stethoscope } from "lucide-react";
 import { Notice, TierBadge } from "@/components/ui";
-import { CATEGORIES, HOSPITAL_TYPES, type Category, type HospitalType } from "@/lib/config";
+import { CATEGORIES, DEGREES, HOSPITAL_TYPES, type Category, type Degree, type HospitalType } from "@/lib/config";
 import { useStore } from "@/lib/store";
-import { calcScore, tierForScore } from "@/lib/tier";
+import { missingFor, nextTier, tierFor } from "@/lib/tier";
 import type { Role } from "@/lib/types";
 
 const COLORS = ["#f472b6", "#fb923c", "#38bdf8", "#a78bfa", "#34d399", "#f87171"];
@@ -20,6 +20,7 @@ function SignupForm() {
   const [license, setLicense] = useState("");
   const [years, setYears] = useState(0);
   const [hours, setHours] = useState(0);
+  const [degree, setDegree] = useState<Degree>("none");
   const [hospitalType, setHospitalType] = useState<HospitalType>("hospital");
   const [hospitalName, setHospitalName] = useState("");
   const [specialties, setSpecialties] = useState<Category[]>([]);
@@ -27,8 +28,9 @@ function SignupForm() {
   const [agree, setAgree] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const score = calcScore({ experienceYears: years, educationHours: hours, hospitalType });
-  const tier = tierForScore(score.total);
+  const tierInput = { experienceYears: years, educationHours: hours, degree };
+  const tier = tierFor(tierInput);
+  const next = nextTier(tier.id);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +49,7 @@ function SignupForm() {
               licenseVerified: true,
               experienceYears: years,
               educationHours: hours,
+              degree,
               hospitalType,
               hospitalName: hospitalName.trim() || HOSPITAL_TYPES[hospitalType].label,
               specialties,
@@ -101,8 +104,23 @@ function SignupForm() {
                 <input type="number" min={0} className="input" value={years} onChange={(e) => setYears(Math.max(0, +e.target.value))} />
               </div>
               <div>
-                <label className="label">교육 이수 시간 (보수·학회 교육)</label>
+                <label className="label">물리치료학회 인정 교육 (시간)</label>
                 <input type="number" min={0} className="input" value={hours} onChange={(e) => setHours(Math.max(0, +e.target.value))} />
+              </div>
+            </div>
+            <div>
+              <label className="label">최종 학위</label>
+              <div className="grid grid-cols-3 gap-2">
+                {(Object.keys(DEGREES) as Degree[]).map((d) => (
+                  <button
+                    type="button"
+                    key={d}
+                    onClick={() => setDegree(d)}
+                    className={`rounded-xl py-2.5 text-sm font-semibold ${degree === d ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600"}`}
+                  >
+                    {DEGREES[d]}
+                  </button>
+                ))}
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -146,13 +164,15 @@ function SignupForm() {
             <div className="flex items-center justify-between rounded-xl bg-slate-50 p-4">
               <div className="text-sm">
                 <div className="text-slate-500">예상 등급</div>
-                <div className="mt-1 text-xs text-slate-400">
-                  경력 {score.experience} + 교육 {score.education} + 기관 {score.hospital} = <b className="text-ink">{score.total}점</b>
-                </div>
+                {next && (
+                  <div className="mt-1 text-xs text-slate-400">
+                    {next.name}까지 {missingFor(next, tierInput).join(" · ")} 필요
+                  </div>
+                )}
               </div>
               <TierBadge tier={tier.id} size="md" />
             </div>
-            <p className="text-xs text-slate-400">경력·교육 이수 내역은 증빙 서류(경력증명서, 보수교육 이수증) 심사 후 최종 반영됩니다.</p>
+            <p className="text-xs text-slate-400">경력·교육·학위는 증빙 서류(경력증명서, 학회 교육 이수증, 학위증명서) 심사 후 최종 등급에 반영됩니다.</p>
           </>
         )}
 

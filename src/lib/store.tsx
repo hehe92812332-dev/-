@@ -13,7 +13,7 @@ import type { Board, User } from "./types";
 
 export { balanceOf, userTier } from "./ledger";
 
-const STORAGE_KEY = "pt-bridge:v2";
+const STORAGE_KEY = "pt-bridge:v3";
 
 type Result = { ok: true; id?: string } | { ok: false; error: string };
 

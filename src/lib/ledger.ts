@@ -18,7 +18,7 @@ import {
   type PaymentMethodId,
   type TierId,
 } from "./config";
-import { calcScore, getTier, tierForScore, tierRank } from "./tier";
+import { getTier, tierFor, tierRank } from "./tier";
 import type { Board, Post, Transaction, User, Wallet } from "./types";
 
 export interface State {
@@ -41,7 +41,7 @@ const iso = (t: number) => new Date(t).toISOString();
 
 export function userTier(user: User) {
   if (!user.therapist) return undefined;
-  return tierForScore(calcScore(user.therapist).total);
+  return tierFor(user.therapist);
 }
 
 export function balanceOf(user: User) {
