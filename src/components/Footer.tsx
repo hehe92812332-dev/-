@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SITE } from "@/lib/config";
+import { BUSINESS, SITE } from "@/lib/config";
 
 export function Footer() {
   return (
@@ -23,7 +23,17 @@ export function Footer() {
           <Link href="/tiers">등급·토큰 정책</Link>
           <Link href="/wallet">토큰 충전·환전</Link>
           <Link href="/signup">회원가입</Link>
+          <Link href="/terms">이용약관</Link>
+          <Link href="/privacy" className="font-semibold text-slate-700">
+            개인정보 처리방침
+          </Link>
+          <Link href="/refund">환불 정책</Link>
         </div>
+      </div>
+      <div className="mx-auto max-w-6xl border-t border-slate-100 px-4 py-4 text-[11px] leading-relaxed text-slate-400">
+        {BUSINESS.companyName} · 대표 {BUSINESS.ceo} · 사업자등록번호 {BUSINESS.registrationNumber} · 통신판매업신고 {BUSINESS.mailOrderNumber}
+        <br />
+        {BUSINESS.address} · {BUSINESS.email} · {BUSINESS.phone}
       </div>
       <div className="border-t border-slate-100 py-4 text-center text-xs text-slate-400">
         © {new Date().getFullYear()} {SITE.nameEn}. All rights reserved.

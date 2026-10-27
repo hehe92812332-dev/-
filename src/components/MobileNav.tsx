@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Gem, Home, MessageCircleQuestion, Stethoscope, Users, Wallet } from "lucide-react";
-import { useStore } from "@/lib/store";
+import { userTier, useStore } from "@/lib/store";
 
 const TABS = [
   { href: "/", label: "홈", icon: Home },
@@ -17,7 +17,7 @@ export function MobileNav() {
   const pathname = usePathname();
   const { currentUser } = useStore();
   // 치료사는 '치료사 찾기' 대신 등급 라운지를 탭에 둡니다
-  const tabs = currentUser?.role === "therapist" ? TABS.map((t) => (t.href === "/therapists" ? { href: "/lounge", label: "라운지", icon: Gem } : t)) : TABS;
+  const tabs = currentUser && userTier(currentUser) ? TABS.map((t) => (t.href === "/therapists" ? { href: "/lounge", label: "라운지", icon: Gem } : t)) : TABS;
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
       <ul className="grid grid-cols-5">

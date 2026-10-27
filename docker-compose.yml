@@ -1,0 +1,14 @@
+# 로컬 개발용 PostgreSQL:  docker compose up -d
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ptb
+      POSTGRES_PASSWORD: ptb
+      POSTGRES_DB: ptbridge
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:

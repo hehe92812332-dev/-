@@ -31,7 +31,7 @@ const STEPS = [
 
 export default function Home() {
   const { posts, users } = useStore();
-  const therapistCount = users.filter((u) => u.role === "therapist").length;
+  const therapistCount = users.filter((u) => u.therapist?.licenseVerified).length;
   const recentQa = posts.filter((p) => p.board === "patient" && p.status !== "refunded").slice(0, 4);
   const recentClinical = posts.filter((p) => p.board === "clinical" && p.status !== "refunded").slice(0, 2);
 

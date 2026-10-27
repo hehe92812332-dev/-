@@ -21,7 +21,7 @@ import {
   type TierId,
 } from "./config";
 import { getTier, tierFor, tierRank } from "./tier";
-import type { Board, ChatMessage, Post, Rating, RatingScore, Transaction, User, Wallet } from "./types";
+import type { Block, Board, ChatMessage, Post, Rating, RatingScore, Report, ReportTarget, Transaction, User, VerificationStatus, Wallet } from "./types";
 
 export interface State {
   users: User[];
@@ -29,6 +29,8 @@ export interface State {
   transactions: Transaction[];
   ratings: Rating[];
   chats: ChatMessage[];
+  reports: Report[];
+  blocks: Block[];
   currentUserId: string | null;
 }
 
@@ -38,18 +40,41 @@ const HOUR = 3600_000;
 const DAY = 24 * HOUR;
 
 const fail = (error: string): Outcome => ({ ok: false, error });
-const uid = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+const uid = (p: string) => `${p}-${crypto.randomUUID()}`;
 const iso = (t: number) => new Date(t).toISOString();
 
 // ───────────────────────── 조회 헬퍼 ─────────────────────────
 
+/** 서류 심사를 통과한 치료사만 등급을 가집니다 */
 export function userTier(user: User) {
-  if (!user.therapist) return undefined;
+  if (!user.therapist?.licenseVerified) return undefined;
   return tierFor(user.therapist);
 }
 
 export function balanceOf(user: User) {
   return user.wallet.cash + user.wallet.bonus + user.wallet.earned;
+}
+
+/** 환자 개인정보(휴대폰·주민등록번호)가 들어 있으면 해당 문자열 반환 */
+export function findPersonalInfo(text: string) {
+  const patterns = [/01[016789][-\s.]?\d{3,4}[-\s.]?\d{4}/, /\d{6}[-\s]?[1-4]\d{6}/];
+  for (const re of patterns) {
+    const m = text.match(re);
+    if (m) return m[0];
+  }
+  return undefined;
+}
+
+const PII_ERROR = "휴대폰 번호·주민등록번호 같은 개인정보는 올릴 수 없어요. 해당 부분을 지우고 다시 시도해 주세요.";
+
+function isSuspended(user: User, now = Date.now()) {
+  return !!user.suspendedUntil && new Date(user.suspendedUntil).getTime() > now;
+}
+
+const SUSPENDED_ERROR = "신고 처리로 이용이 일시 정지된 계정입니다.";
+
+export function maskAccount(account: string) {
+  return account.replace(/\d(?=(?:\D*\d){4})/g, "*");
 }
 
 export function rewardAfterFee(tokens: number) {
@@ -166,7 +191,7 @@ function refundPost(s: State, post: Post, reason: "no_answer" | "cancelled"): St
 
 // ───────────────────────── 결제 ─────────────────────────
 
-export function purchase(s: State, userId: string, packageId: string, method: PaymentMethodId): Outcome {
+export function purchase(s: State, userId: string, packageId: string, method: PaymentMethodId, orderId?: string): Outcome {
   const pkg = TOKEN_PACKAGES.find((p) => p.id === packageId);
   if (!pkg) return fail("상품을 찾을 수 없습니다.");
   if (pkg.tokens < MIN_PURCHASE_TOKENS) return fail(`최소 ${MIN_PURCHASE_TOKENS}토큰부터 충전할 수 있습니다.`);
@@ -178,6 +203,7 @@ export function purchase(s: State, userId: string, packageId: string, method: Pa
     bonusTokens: pkg.bonus,
     krw: pkg.price,
     method,
+    orderId,
     memo: `토큰 ${pkg.tokens}개${pkg.bonus ? ` + 보너스 ${pkg.bonus}개` : ""} 충전`,
   });
   return { ok: true, state: s };
@@ -203,7 +229,7 @@ export function revokePurchase(s: State, userId: string, txId: string): Outcome 
   return { ok: true, state: s };
 }
 
-export function subscribe(s: State, userId: string, planId: MembershipPlanId, method: PaymentMethodId): Outcome {
+export function subscribe(s: State, userId: string, planId: MembershipPlanId, method: PaymentMethodId, orderId?: string): Outcome {
   const plan = MEMBERSHIP_PLANS.find((p) => p.id === planId);
   const user = s.users.find((u) => u.id === userId);
   if (!plan || !user) return fail("잘못된 요청입니다.");
@@ -221,6 +247,7 @@ export function subscribe(s: State, userId: string, planId: MembershipPlanId, me
     bonusTokens: plan.monthlyBonus,
     krw: plan.price,
     method,
+    orderId,
     memo: `${plan.name} 멤버십 결제 (월 정기결제)`,
   });
   return { ok: true, state: s };
@@ -246,9 +273,26 @@ export function withdraw(s: State, userId: string, tokens: number, bankAccount: 
     type: "withdraw",
     tokens: -tokens,
     krw: net,
-    memo: `환전 신청 → ${bankAccount} (원천징수 ${(WITHHOLDING_TAX_RATE * 100).toFixed(1)}% 차감)`,
+    status: "requested",
+    memo: `환전 신청 → ${maskAccount(bankAccount)} (원천징수 ${(WITHHOLDING_TAX_RATE * 100).toFixed(1)}% 차감)`,
   });
-  return { ok: true, state: s };
+  return { ok: true, state: s, id: s.transactions[0].id };
+}
+
+/** 관리자: 계좌 이체를 마친 환전 신청을 지급 완료로 표시 */
+export function markWithdrawalPaid(s: State, txId: string): Outcome {
+  const tx = s.transactions.find((t) => t.id === txId);
+  if (!tx || tx.type !== "withdraw" || tx.status !== "requested") return fail("처리할 수 없는 환전 신청입니다.");
+  return { ok: true, state: { ...s, transactions: s.transactions.map((t) => (t.id === txId ? { ...t, status: "paid" } : t)) } };
+}
+
+/** 관리자: 환전 신청 반려 — 토큰을 수익 지갑으로 돌려줍니다 */
+export function rejectWithdrawal(s: State, txId: string, reason: string): Outcome {
+  const tx = s.transactions.find((t) => t.id === txId);
+  if (!tx || tx.type !== "withdraw" || tx.status !== "requested") return fail("처리할 수 없는 환전 신청입니다.");
+  s = { ...s, transactions: s.transactions.map((t) => (t.id === txId ? { ...t, status: "rejected" } : t)) };
+  s = updateUser(s, tx.userId, (u) => ({ ...u, wallet: addWallet(u.wallet, { earned: -tx.tokens }) }));
+  return { ok: true, state: addTx(s, { userId: tx.userId, type: "withdraw_cancel", tokens: -tx.tokens, memo: `환전 반려: ${reason}` }) };
 }
 
 // ───────────────────────── 질문·답변 ─────────────────────────
@@ -262,8 +306,14 @@ export function createPost(
   if (!user) return fail("로그인이 필요합니다.");
   if (input.board === "clinical" && user.role !== "therapist") return fail("임상 토론방은 치료사 회원만 이용할 수 있습니다.");
   if (input.directTherapistId === userId) return fail("본인에게는 질문할 수 없습니다.");
+  if (isSuspended(user)) return fail(SUSPENDED_ERROR);
+  if (input.board === "clinical" && !userTier(user)) return fail("서류 심사가 끝난 치료사만 임상 토론에 글을 쓸 수 있습니다.");
   if (input.title.trim().length < 5) return fail("제목을 5자 이상 입력해 주세요.");
   if (input.body.trim().length < 20) return fail("내용을 20자 이상 입력해 주세요.");
+  if (input.title.length > 100 || input.body.length > 5000) return fail("제목은 100자, 내용은 5000자까지 쓸 수 있습니다.");
+  if (findPersonalInfo(`${input.title} ${input.body}`)) return fail(PII_ERROR);
+  const directUser = input.directTherapistId ? s.users.find((u) => u.id === input.directTherapistId) : undefined;
+  if (input.directTherapistId && (!directUser || !userTier(directUser))) return fail("지정할 수 없는 치료사입니다.");
   const quote = quoteQuestion(s, user, input);
   if (balanceOf(user) < quote.total) return fail("토큰이 부족합니다. 충전 후 다시 시도해 주세요.");
 
@@ -323,13 +373,16 @@ export function addAnswer(s: State, userId: string, postId: string, body: string
   const user = s.users.find((u) => u.id === userId);
   const post = s.posts.find((p) => p.id === postId);
   if (!user || !post) return fail("로그인이 필요합니다.");
-  if (user.role !== "therapist") return fail("답변은 면허 인증된 치료사만 작성할 수 있습니다.");
+  if (user.role !== "therapist" || !userTier(user)) return fail("답변은 서류 심사를 마친 치료사만 작성할 수 있습니다.");
+  if (isSuspended(user)) return fail(SUSPENDED_ERROR);
   if (post.authorId === userId) return fail("본인 질문에는 답변할 수 없습니다.");
   if (post.status !== "open") return fail("이미 마감된 질문입니다.");
   if (post.directTherapistId && post.directTherapistId !== userId) return fail("지정된 치료사만 답변할 수 있는 1:1 질문입니다.");
   if (tierRank(userTier(user)!.id) < tierRank(post.targetTier))
     return fail(`${getTier(post.targetTier).name} 등급 이상만 답변할 수 있는 질문입니다.`);
   if (body.trim().length < 20) return fail("답변을 20자 이상 입력해 주세요.");
+  if (body.length > 5000) return fail("답변은 5000자까지 쓸 수 있습니다.");
+  if (findPersonalInfo(body)) return fail(PII_ERROR);
   return {
     ok: true,
     state: updatePost(s, postId, (p) => ({
@@ -405,6 +458,7 @@ export function rate(
 ): Outcome {
   const post = s.posts.find((p) => p.id === input.postId);
   if (!post) return fail("잘못된 요청입니다.");
+  if (input.tags.length > 5 || input.tags.some((t) => t.length > 30)) return fail("잘못된 평가 항목입니다.");
   let toId: string;
   if (input.answerId) {
     if (!canRateAnswer(s, userId, post, input.answerId)) return fail("이미 평가했거나 평가할 수 없는 답변입니다.");
@@ -434,6 +488,8 @@ export function sendChat(s: State, userId: string, body: string, kind: ChatMessa
   const text = body.trim();
   if (!text) return fail("메시지를 입력해 주세요.");
   if (text.length > 1000) return fail("메시지는 1000자까지 보낼 수 있습니다.");
+  if (isSuspended(user!)) return fail(SUSPENDED_ERROR);
+  if (findPersonalInfo(text)) return fail(PII_ERROR);
   return {
     ok: true,
     state: {
@@ -443,43 +499,139 @@ export function sendChat(s: State, userId: string, body: string, kind: ChatMessa
   };
 }
 
+// ───────────────────────── 신고·차단 ─────────────────────────
+
+export function report(
+  s: State,
+  userId: string,
+  input: { targetType: ReportTarget; targetId: string; reason: string; detail: string },
+): Outcome {
+  let targetUserId: string | undefined;
+  if (input.targetType === "post") targetUserId = s.posts.find((p) => p.id === input.targetId)?.authorId;
+  if (input.targetType === "answer")
+    targetUserId = s.posts.flatMap((p) => p.answers).find((a) => a.id === input.targetId)?.authorId;
+  if (input.targetType === "chat") targetUserId = s.chats.find((c) => c.id === input.targetId)?.authorId;
+  if (input.targetType === "user") targetUserId = s.users.find((u) => u.id === input.targetId)?.id;
+  if (!targetUserId) return fail("신고 대상을 찾을 수 없습니다.");
+  if (targetUserId === userId) return fail("본인은 신고할 수 없습니다.");
+  if (s.reports.some((r) => r.reporterId === userId && r.targetId === input.targetId && r.status === "open"))
+    return fail("이미 신고한 내용이에요. 운영팀이 확인 중입니다.");
+  const report: Report = {
+    id: uid("rp"),
+    reporterId: userId,
+    targetType: input.targetType,
+    targetId: input.targetId,
+    targetUserId,
+    reason: input.reason,
+    detail: input.detail.slice(0, 1000),
+    status: "open",
+    createdAt: iso(Date.now()),
+  };
+  return { ok: true, state: { ...s, reports: [report, ...s.reports] } };
+}
+
+export function block(s: State, userId: string, blockedId: string): Outcome {
+  if (userId === blockedId) return fail("본인은 차단할 수 없습니다.");
+  if (s.blocks.some((b) => b.userId === userId && b.blockedId === blockedId)) return { ok: true, state: s };
+  return { ok: true, state: { ...s, blocks: [...s.blocks, { userId, blockedId, createdAt: iso(Date.now()) }] } };
+}
+
+export function unblock(s: State, userId: string, blockedId: string): Outcome {
+  return { ok: true, state: { ...s, blocks: s.blocks.filter((b) => !(b.userId === userId && b.blockedId === blockedId)) } };
+}
+
+/** 관리자: 신고 처리. hide = 해당 콘텐츠 숨김(미마감 질문은 환불), suspend = 작성자 7일 정지 */
+export function resolveReport(s: State, reportId: string, action: "hide" | "suspend" | "dismiss", note = ""): Outcome {
+  const rp = s.reports.find((r) => r.id === reportId);
+  if (!rp || rp.status !== "open") return fail("처리할 수 없는 신고입니다.");
+  if (action === "hide" || action === "suspend") {
+    if (rp.targetType === "post") {
+      const post = s.posts.find((p) => p.id === rp.targetId);
+      if (post?.status === "open") s = refundPost(s, post, "cancelled");
+      s = updatePost(s, rp.targetId, (p) => ({ ...p, hidden: true }));
+    }
+    if (rp.targetType === "answer")
+      s = { ...s, posts: s.posts.map((p) => ({ ...p, answers: p.answers.map((a) => (a.id === rp.targetId ? { ...a, hidden: true } : a)) })) };
+    if (rp.targetType === "chat") s = { ...s, chats: s.chats.map((c) => (c.id === rp.targetId ? { ...c, hidden: true } : c)) };
+  }
+  if (action === "suspend") s = updateUser(s, rp.targetUserId, (u) => ({ ...u, suspendedUntil: iso(Date.now() + 7 * DAY) }));
+  const resolution = { hide: "콘텐츠 숨김", suspend: "콘텐츠 숨김 + 작성자 7일 이용 정지", dismiss: "문제 없음" }[action] + (note ? ` (${note})` : "");
+  // 같은 대상에 대한 열린 신고를 함께 처리
+  s = {
+    ...s,
+    reports: s.reports.map((r) =>
+      r.targetId === rp.targetId && r.status === "open" ? { ...r, status: action === "dismiss" ? "dismissed" : "resolved", resolution } : r,
+    ),
+  };
+  return { ok: true, state: s };
+}
+
+/** 관리자: 치료사 서류 심사 결과 반영 */
+export function setVerification(s: State, userId: string, status: VerificationStatus, reason = ""): Outcome {
+  const user = s.users.find((u) => u.id === userId);
+  if (!user?.therapist) return fail("치료사 회원이 아닙니다.");
+  return {
+    ok: true,
+    state: updateUser(s, userId, (u) => ({
+      ...u,
+      therapist: { ...u.therapist!, verification: status, licenseVerified: status === "approved", rejectReason: status === "rejected" ? reason : undefined },
+    })),
+  };
+}
+
 // ───────────────────────── 자동 정산 (서버에서는 크론 작업) ─────────────────────────
 
-/** 기한이 지난 질문을 자동 채택·환불하고, 멤버십 갱신일이 지난 회원을 갱신·해지합니다. */
-export function sweep(s: State, now = Date.now()): State {
+/** 기한이 지난 질문을 자동 채택(답변 있음)하거나 환불(답변 없음)합니다. */
+export function sweepPosts(s: State, now = Date.now()): State {
   let next = s;
   for (const post of s.posts) {
     if (post.status !== "open" || new Date(post.expiresAt).getTime() > now) continue;
-    if (post.answers.length === 0) {
+    const visible = post.answers.filter((a) => !a.hidden);
+    if (visible.length === 0) {
       next = refundPost(next, post, "no_answer");
     } else {
-      const best = [...post.answers].sort(
-        (a, b) => b.likes.length - a.likes.length || a.createdAt.localeCompare(b.createdAt),
-      )[0];
+      const best = [...visible].sort((a, b) => b.likes.length - a.likes.length || a.createdAt.localeCompare(b.createdAt))[0];
       next = settleAdopt(next, post, best.id, "auto_adopt");
     }
   }
-  for (const user of s.users) {
-    const m = user.membership;
-    if (!m || new Date(m.renewsAt).getTime() > now) continue;
-    if (!m.autoRenew) {
-      next = updateUser(next, user.id, (u) => ({ ...u, membership: undefined }));
-      continue;
-    }
-    const plan = MEMBERSHIP_PLANS.find((p) => p.id === m.plan)!;
-    next = updateUser(next, user.id, (u) => ({
-      ...u,
-      membership: { ...m, renewsAt: iso(new Date(m.renewsAt).getTime() + 30 * DAY) },
-      wallet: addWallet(u.wallet, { cash: plan.monthlyTokens, bonus: plan.monthlyBonus }),
-    }));
-    next = addTx(next, {
-      userId: user.id,
-      type: "membership",
-      tokens: plan.monthlyTokens,
-      bonusTokens: plan.monthlyBonus,
-      krw: plan.price,
-      memo: `${plan.name} 멤버십 정기결제 갱신`,
-    });
-  }
+  return next;
+}
+
+/** 갱신일이 지난 멤버십 회원 */
+export function dueMemberships(s: State, now = Date.now()) {
+  return s.users.filter((u) => u.membership && new Date(u.membership.renewsAt).getTime() <= now);
+}
+
+/** 정기결제 성공 후 호출: 다음 달 토큰 지급 */
+export function renewMembership(s: State, userId: string, orderId?: string): State {
+  const user = s.users.find((u) => u.id === userId);
+  const m = user?.membership;
+  if (!m) return s;
+  const plan = MEMBERSHIP_PLANS.find((p) => p.id === m.plan)!;
+  s = updateUser(s, userId, (u) => ({
+    ...u,
+    membership: { ...m, renewsAt: iso(new Date(m.renewsAt).getTime() + 30 * DAY) },
+    wallet: addWallet(u.wallet, { cash: plan.monthlyTokens, bonus: plan.monthlyBonus }),
+  }));
+  return addTx(s, {
+    userId,
+    type: "membership",
+    tokens: plan.monthlyTokens,
+    bonusTokens: plan.monthlyBonus,
+    krw: plan.price,
+    orderId,
+    memo: `${plan.name} 멤버십 정기결제 갱신`,
+  });
+}
+
+/** 자동 갱신 해지 또는 정기결제 실패 시 멤버십 종료 */
+export function endMembership(s: State, userId: string): State {
+  return updateUser(s, userId, (u) => ({ ...u, membership: undefined }));
+}
+
+/** 데모 모드 전용: 질문 정산 + (결제 없이) 멤버십 갱신·종료 */
+export function sweep(s: State, now = Date.now()): State {
+  let next = sweepPosts(s, now);
+  for (const u of dueMemberships(next, now)) next = u.membership!.autoRenew ? renewMembership(next, u.id) : endMembership(next, u.id);
   return next;
 }

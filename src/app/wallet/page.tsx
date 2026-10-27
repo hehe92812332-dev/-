@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, Check, Crown, CreditCard, Hourglass, Landmark } from "lucide-react";
 import { Checkout, type CheckoutItem } from "@/components/Checkout";
+import { LoginRequired } from "@/components/LoginRequired";
 import { Notice, TokenAmount, timeAgo } from "@/components/ui";
 import {
   MEMBERSHIP_PLANS,
@@ -19,7 +20,7 @@ import {
   type PaymentMethodId,
 } from "@/lib/config";
 import { canRevoke, membershipPlan, pendingEarned, withdrawable } from "@/lib/ledger";
-import { balanceOf, useStore } from "@/lib/store";
+import { balanceOf, useStore, type Result } from "@/lib/store";
 import type { TxType } from "@/lib/types";
 
 const TX_LABEL: Record<TxType, string> = {
@@ -33,6 +34,7 @@ const TX_LABEL: Record<TxType, string> = {
   tip_sent: "팁 보냄",
   tip_received: "팁 받음",
   withdraw: "현금 환전",
+  withdraw_cancel: "환전 반려",
 };
 
 type Tab = "buy" | "membership" | "withdraw";
@@ -46,14 +48,10 @@ function WalletInner() {
   const [amount, setAmount] = useState(MIN_WITHDRAW_TOKENS);
   const [account, setAccount] = useState("");
   const [msg, setMsg] = useState<{ tone: "error" | "success"; text: string } | null>(null);
-  const [checkout, setCheckout] = useState<{ item: CheckoutItem; pay: (m: PaymentMethodId) => { ok: boolean; error?: string } } | null>(null);
+  const [checkout, setCheckout] = useState<{ item: CheckoutItem; pay: (m: PaymentMethodId) => Promise<Result> } | null>(null);
 
   if (!currentUser)
-    return (
-      <div className="mx-auto max-w-3xl px-4 py-12">
-        <Notice>지갑을 보려면 로그인(우측 상단 데모 계정 선택)이 필요합니다.</Notice>
-      </div>
-    );
+    return <LoginRequired what="지갑을 보려면" />;
 
   const isTherapist = currentUser.role === "therapist";
   const { cash, bonus, earned } = currentUser.wallet;
@@ -95,6 +93,8 @@ function WalletInner() {
         ],
         price: p.price,
         recurring: true,
+        // 서버 모드 정기결제는 카드 등록(빌링키) 방식이라 카드만 지원
+        methods: store.serverMode ? ["card"] : undefined,
       },
       pay: (m) => store.subscribe(p.id, m),
     });
@@ -229,9 +229,9 @@ function WalletInner() {
                           <b className="text-ink">{new Date(currentUser.membership!.renewsAt).toLocaleDateString("ko-KR")}</b>
                         </div>
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             const on = !currentUser.membership!.autoRenew;
-                            const r = store.setAutoRenew(on);
+                            const r = await store.setAutoRenew(on);
                             setMsg(r.ok ? { tone: "success", text: on ? "자동 갱신을 다시 켰어요." : "자동 갱신을 해지했어요. 남은 기간까지 혜택이 유지됩니다." } : { tone: "error", text: r.error });
                           }}
                           className="btn-ghost w-full"
@@ -293,9 +293,9 @@ function WalletInner() {
                   <span className="text-lg tabular-nums text-brand-700">{net.toLocaleString()}원</span>
                 </div>
                 <button
-                  onClick={() => {
-                    const r = store.withdraw(amount, account);
-                    setMsg(r.ok ? { tone: "success", text: `환전 신청 완료! 영업일 기준 2~3일 내 ${net.toLocaleString()}원이 입금됩니다.` } : { tone: "error", text: r.error });
+                  onClick={async () => {
+                    const r = await store.withdraw(amount, account);
+                    setMsg(r.ok ? { tone: "success", text: `환전 신청 완료! 운영팀 확인 후 영업일 기준 2~3일 내 ${net.toLocaleString()}원이 입금됩니다.` } : { tone: "error", text: r.error });
                   }}
                   className="btn-dark mt-4"
                 >
@@ -350,9 +350,9 @@ function WalletInner() {
                 </div>
                 {canRevoke(state, t) && (
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (!confirm(`${t.krw?.toLocaleString()}원 결제를 취소할까요? 이 충전으로 받은 토큰이 회수됩니다.`)) return;
-                      const r = store.revokePurchase(t.id);
+                      const r = await store.revokePurchase(t.id);
                       setMsg(r.ok ? { tone: "success", text: "결제를 취소했어요. 결제 수단으로 환불됩니다." } : { tone: "error", text: r.error });
                     }}
                     className="mt-1 text-[11px] font-semibold text-rose-500 underline"

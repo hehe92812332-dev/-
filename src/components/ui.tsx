@@ -4,7 +4,7 @@ import { useId } from "react";
 import { Coins, ShieldCheck } from "lucide-react";
 import type { TierId } from "@/lib/config";
 import { getTier } from "@/lib/tier";
-import { temperatureOf, temperatureStyle } from "@/lib/manner";
+import { temperatureOf, temperatureStyle, visibleRatings } from "@/lib/manner";
 import { userTier, useStore } from "@/lib/store";
 import type { User } from "@/lib/types";
 
@@ -91,7 +91,7 @@ export function TempGauge({ userId, size = "sm" }: { userId: string; size?: "sm"
   const { ratings } = useStore();
   const temp = temperatureOf(ratings, userId);
   const { color, face } = temperatureStyle(temp);
-  const count = ratings.filter((r) => r.toId === userId).length;
+  const count = visibleRatings(ratings, userId).length;
   return (
     <div>
       <div className="flex items-end justify-between">

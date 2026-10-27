@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, RotateCcw, UserPlus } from "lucide-react";
 import { SITE } from "@/lib/config";
@@ -33,7 +34,7 @@ export function Logo() {
 
 export function Header() {
   const pathname = usePathname();
-  const { currentUser, users, switchUser, resetDemo } = useStore();
+  const { currentUser, users, switchUser, resetDemo, serverMode, me } = useStore();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -70,7 +71,55 @@ export function Header() {
               <TokenAmount value={balanceOf(currentUser)} />
             </Link>
           )}
-          <div className="relative">
+          {serverMode && !me && (
+            <Link href={`/login?next=${encodeURIComponent(pathname)}`} className="btn-primary !py-2">
+              로그인
+            </Link>
+          )}
+          {serverMode && me && (
+            <div className="relative">
+              <button
+                onClick={() => setOpen((v) => !v)}
+                className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white py-1 pl-1 pr-2 text-sm font-semibold hover:bg-slate-50"
+                aria-expanded={open}
+              >
+                {currentUser ? <Avatar user={currentUser} size={30} /> : <span className="px-2">{me.name || "내 계정"}</span>}
+                <ChevronDown className="size-4 text-slate-400" />
+              </button>
+              {open && (
+                <div className="absolute right-0 mt-2 w-60 overflow-hidden rounded-2xl border border-slate-200 bg-white py-1 shadow-xl">
+                  {currentUser && (
+                    <Link href={`/users/${currentUser.id}`} className="block px-4 py-2.5 text-sm hover:bg-slate-50">
+                      내 프로필
+                    </Link>
+                  )}
+                  <Link href="/wallet" className="block px-4 py-2.5 text-sm hover:bg-slate-50">
+                    내 지갑
+                  </Link>
+                  {currentUser?.therapist && (
+                    <Link href="/signup/pending" className="block px-4 py-2.5 text-sm hover:bg-slate-50">
+                      서류 심사 상태
+                    </Link>
+                  )}
+                  {me.isAdmin && (
+                    <Link href="/admin" className="block px-4 py-2.5 text-sm font-semibold text-violet-700 hover:bg-slate-50">
+                      관리자 콘솔
+                    </Link>
+                  )}
+                  <Link href="/account" className="block px-4 py-2.5 text-sm text-slate-400 hover:bg-slate-50">
+                    회원 탈퇴
+                  </Link>
+                  <button
+                    onClick={() => signOut({ redirectTo: "/" })}
+                    className="block w-full border-t border-slate-100 px-4 py-2.5 text-left text-sm text-slate-500 hover:bg-slate-50"
+                  >
+                    로그아웃
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          <div className={`relative ${serverMode ? "hidden" : ""}`}>
             <button
               onClick={() => setOpen((v) => !v)}
               className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white py-1 pl-1 pr-2 text-sm font-semibold hover:bg-slate-50"
@@ -79,7 +128,7 @@ export function Header() {
               {currentUser ? <Avatar user={currentUser} size={30} /> : <span className="px-2">로그인</span>}
               <ChevronDown className="size-4 text-slate-400" />
             </button>
-            {open && (
+            {open && !serverMode && (
               <div className="absolute right-0 mt-2 w-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
                 <div className="border-b border-slate-100 bg-slate-50 px-4 py-2.5 text-xs font-semibold text-slate-500">
                   데모 계정 전환 (실서비스에서는 로그인으로 대체)
@@ -109,6 +158,13 @@ export function Header() {
           </div>
         </div>
       </div>
+      {currentUser?.therapist && !currentUser.therapist.licenseVerified && (
+        <Link href="/signup/pending" className="block bg-amber-50 px-4 py-2 text-center text-xs font-semibold text-amber-800">
+          {currentUser.therapist.verification === "rejected"
+            ? "서류 보완이 필요해요. 눌러서 확인하세요 →"
+            : "서류 심사 중이에요. 심사가 끝나면 답변·임상 토론·라운지를 이용할 수 있어요."}
+        </Link>
+      )}
     </header>
   );
 }

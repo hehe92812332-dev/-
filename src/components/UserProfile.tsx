@@ -4,10 +4,11 @@ import Link from "next/link";
 import { BookOpenCheck, Building2, GraduationCap, ShieldCheck, Timer } from "lucide-react";
 import { DEGREES, HOSPITAL_TYPES, RATING_SCORES } from "@/lib/config";
 import { quoteQuestion } from "@/lib/ledger";
-import { satisfactionRate, tagCounts } from "@/lib/manner";
+import { satisfactionRate, tagCounts, visibleRatings } from "@/lib/manner";
 import { userTier, useStore } from "@/lib/store";
 import type { RatingScore } from "@/lib/types";
 import { PostCard } from "./PostList";
+import { ReportMenu } from "./ReportMenu";
 import { Avatar, TempGauge, TierBadge, timeAgo } from "./ui";
 
 export function UserProfile({ id }: { id: string }) {
@@ -17,7 +18,7 @@ export function UserProfile({ id }: { id: string }) {
 
   const t = user.therapist;
   const tier = userTier(user);
-  const received = ratings.filter((r) => r.toId === id);
+  const received = visibleRatings(ratings, id);
   const tags = tagCounts(ratings, id);
   const rate = satisfactionRate(ratings, id);
   const scoreCount = (k: RatingScore) => received.filter((r) => r.score === k).length;
@@ -25,7 +26,7 @@ export function UserProfile({ id }: { id: string }) {
   const adopted = answered.filter((p) => p.answers.find((a) => a.id === p.adoptedAnswerId)?.authorId === id);
   const asked = posts.filter((p) => p.authorId === id && p.status !== "refunded");
   // 임상 토론 글은 치료사 회원에게만 보여줍니다
-  const visible = (t ? answered : asked).filter((p) => p.board === "patient" || currentUser?.role === "therapist");
+  const visible = (t ? answered : asked).filter((p) => p.board === "patient" || (currentUser && userTier(currentUser)));
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 md:py-12">
@@ -36,6 +37,7 @@ export function UserProfile({ id }: { id: string }) {
             <div>
               <div className="flex items-center gap-1.5 text-xl font-extrabold">
                 {user.name}
+                <ReportMenu targetType="user" targetId={user.id} authorId={user.id} authorName={user.name} onMessage={(_t, text) => alert(text)} />
                 {t?.licenseVerified && <ShieldCheck className="size-5 text-brand-600" aria-label="면허 인증" />}
               </div>
               <div className="mt-1.5 flex items-center gap-2 text-sm text-slate-500">

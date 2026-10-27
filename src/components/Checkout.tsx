@@ -17,6 +17,8 @@ export interface CheckoutItem {
   lines: [string, string][];
   price: number;
   recurring?: boolean;
+  /** 허용 결제수단 (기본: 전체) */
+  methods?: PaymentMethodId[];
 }
 
 /**
@@ -30,7 +32,7 @@ export function Checkout({
 }: {
   item: CheckoutItem | null;
   onClose: () => void;
-  onPay: (method: PaymentMethodId) => { ok: boolean; error?: string };
+  onPay: (method: PaymentMethodId) => Promise<{ ok: true } | { ok: false; error: string }>;
 }) {
   const [method, setMethod] = useState<PaymentMethodId>("card");
   const [agree, setAgree] = useState(false);
@@ -47,16 +49,15 @@ export function Checkout({
 
   if (!item) return null;
 
-  const pay = () => {
+  const pay = async () => {
     setPhase("paying");
-    setTimeout(() => {
-      const r = onPay(method);
-      if (r.ok) setPhase("done");
-      else {
-        setError(r.error ?? "결제에 실패했습니다.");
-        setPhase("form");
-      }
-    }, 900);
+    // 실결제(토스페이먼츠)는 결제창으로 이동했다가 /payments/success 로 돌아옵니다
+    const r = await onPay(method);
+    if (r.ok) setPhase("done");
+    else {
+      setError(r.error);
+      setPhase("form");
+    }
   };
 
   return (
@@ -103,7 +104,7 @@ export function Checkout({
 
             <div className="mt-5 text-sm font-semibold">결제 수단</div>
             <div className="mt-2 grid grid-cols-2 gap-2">
-              {PAYMENT_METHODS.map((m) => (
+              {PAYMENT_METHODS.filter((m) => !item.methods || item.methods.includes(m.id)).map((m) => (
                 <button
                   key={m.id}
                   onClick={() => setMethod(m.id)}
@@ -135,7 +136,9 @@ export function Checkout({
               {phase === "paying" ? <Loader2 className="size-5 animate-spin" /> : <Lock className="size-4" />}
               {phase === "paying" ? "결제 진행 중…" : `${item.price.toLocaleString()}원 결제하기`}
             </button>
-            <p className="mt-3 text-center text-[11px] text-slate-400">데모 버전 — 실제 결제는 이루어지지 않습니다.</p>
+            {!process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY && (
+              <p className="mt-3 text-center text-[11px] text-slate-400">테스트 모드 — 실제 결제는 이루어지지 않습니다.</p>
+            )}
           </>
         )}
       </div>

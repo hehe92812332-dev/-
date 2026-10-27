@@ -2,8 +2,14 @@ import type { Category, Degree, HospitalType, MembershipPlanId, PaymentMethodId,
 
 export type Role = "therapist" | "patient";
 
+export type VerificationStatus = "pending" | "approved" | "rejected";
+
 export interface TherapistProfile {
+  /** 면허·경력·교육·학위 서류 심사 통과 여부. 통과 전에는 등급이 없고 답변·라운지를 이용할 수 없습니다. */
   licenseVerified: boolean;
+  verification?: VerificationStatus;
+  /** 반려 사유 (본인에게만 표시) */
+  rejectReason?: string;
   experienceYears: number;
   /** 물리치료학회 인정 교육 이수 시간 */
   educationHours: number;
@@ -42,6 +48,9 @@ export interface User {
   therapist?: TherapistProfile;
   wallet: Wallet;
   membership?: Membership;
+  isAdmin?: boolean;
+  /** 이용 정지 종료 시각 (신고 처리 결과) */
+  suspendedUntil?: string;
 }
 
 /** clinical: 치료사 전용 임상 토론, patient: 환자 Q&A */
@@ -55,6 +64,8 @@ export interface Answer {
   likes: string[];
   /** 받은 감사 팁 합계 (수수료 차감 전) */
   tips: number;
+  /** 신고 처리로 숨김 */
+  hidden?: boolean;
 }
 
 export interface Post {
@@ -81,6 +92,7 @@ export interface Post {
   expiresAt: string;
   views: number;
   answers: Answer[];
+  hidden?: boolean;
 }
 
 export type TxType =
@@ -93,7 +105,8 @@ export type TxType =
   | "reward"
   | "tip_sent"
   | "tip_received"
-  | "withdraw";
+  | "withdraw"
+  | "withdraw_cancel";
 
 export interface Transaction {
   id: string;
@@ -110,6 +123,10 @@ export interface Transaction {
   /** purchase: 청약철회 완료 여부 */
   revoked?: boolean;
   postId?: string;
+  /** 결제 주문 id (purchase·membership) — 결제 취소 시 PG 환불에 사용 */
+  orderId?: string;
+  /** withdraw: 환전 처리 상태 */
+  status?: "requested" | "paid" | "rejected";
 }
 
 export type RatingScore = "great" | "good" | "bad";
@@ -124,6 +141,8 @@ export interface Rating {
   score: RatingScore;
   tags: string[];
   createdAt: string;
+  /** 서버가 공개 여부를 판정해 내려준 경우 true (상호 평가 완료 또는 블라인드 기간 경과) */
+  revealed?: boolean;
 }
 
 /** 등급 라운지 채팅. study 메시지는 방 상단에 스터디 공지로 고정됩니다. */
@@ -133,5 +152,27 @@ export interface ChatMessage {
   authorId: string;
   body: string;
   kind: "text" | "study";
+  createdAt: string;
+  hidden?: boolean;
+}
+
+export type ReportTarget = "post" | "answer" | "chat" | "user";
+
+export interface Report {
+  id: string;
+  reporterId: string;
+  targetType: ReportTarget;
+  targetId: string;
+  targetUserId: string;
+  reason: string;
+  detail: string;
+  status: "open" | "resolved" | "dismissed";
+  createdAt: string;
+  resolution?: string;
+}
+
+export interface Block {
+  userId: string;
+  blockedId: string;
   createdAt: string;
 }

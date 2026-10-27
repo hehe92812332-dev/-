@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Lock, Megaphone, Send, Users } from "lucide-react";
+import { ReportMenu } from "@/components/ReportMenu";
 import { Avatar, GemIcon, Notice, TempChip } from "@/components/ui";
 import { TIERS } from "@/lib/config";
 import { userTier, useStore } from "@/lib/store";
@@ -16,7 +17,8 @@ function clock(iso: string) {
 }
 
 export default function LoungePage() {
-  const { currentUser, users, chats, getUser, sendChat } = useStore();
+  const { currentUser, users, chats, getUser, sendChat, pollChats, blocks } = useStore();
+  const [sending, setSending] = useState(false);
   const [draft, setDraft] = useState("");
   const [asStudy, setAsStudy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,11 +27,18 @@ export default function LoungePage() {
   const tier = currentUser ? userTier(currentUser) : undefined;
   const messages = useMemo(() => (tier ? chats.filter((c) => c.room === tier.id) : []), [chats, tier]);
   const members = tier ? users.filter((u) => userTier(u)?.id === tier.id) : [];
-  const study = [...messages].reverse().find((m) => m.kind === "study");
+  const blockedIds = new Set(blocks.filter((b) => b.userId === currentUser?.id).map((b) => b.blockedId));
+  const study = [...messages].reverse().find((m) => m.kind === "study" && !blockedIds.has(m.authorId));
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages.length]);
+
+  // 서버 모드: 3초마다 새 메시지 확인 (화면이 보일 때만)
+  useEffect(() => {
+    const timer = setInterval(() => document.visibilityState === "visible" && pollChats(), 3000);
+    return () => clearInterval(timer);
+  }, [pollChats]);
 
   if (!currentUser || !tier)
     return (
@@ -53,8 +62,11 @@ export default function LoungePage() {
       </div>
     );
 
-  const send = () => {
-    const r = sendChat(draft, asStudy ? "study" : "text");
+  const send = async () => {
+    if (sending) return;
+    setSending(true);
+    const r = await sendChat(draft, asStudy ? "study" : "text");
+    setSending(false);
     if (!r.ok) return setError(r.error);
     setDraft("");
     setAsStudy(false);
@@ -153,7 +165,7 @@ export default function LoungePage() {
                       {author.name} <TempChip userId={author.id} />
                     </div>
                   )}
-                  <div className={`flex items-end gap-1.5 ${mine ? "flex-row-reverse" : ""}`}>
+                  <div className={`group flex items-end gap-1.5 ${mine ? "flex-row-reverse" : ""}`}>
                     <div
                       className={`whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
                         m.kind === "study"
@@ -168,9 +180,19 @@ export default function LoungePage() {
                           <Megaphone className="size-3" /> 스터디 공지
                         </div>
                       )}
-                      {m.body}
+                      {blockedIds.has(m.authorId) ? <span className="text-slate-400">차단한 회원의 메시지입니다.</span> : m.body}
                     </div>
                     <span className="shrink-0 text-[10px] text-slate-400">{clock(m.createdAt)}</span>
+                    {!mine && (
+                      <ReportMenu
+                        targetType="chat"
+                        targetId={m.id}
+                        authorId={author.id}
+                        authorName={author.name}
+                        onMessage={(tone, text) => setError(tone === "error" ? text : null)}
+                        className="opacity-0 transition group-hover:opacity-100 max-md:opacity-100"
+                      />
+                    )}
                   </div>
                 </div>
               </div>

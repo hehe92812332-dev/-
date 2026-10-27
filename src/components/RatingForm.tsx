@@ -6,6 +6,7 @@ import {
   ANSWER_PRAISE_TAGS,
   ASKER_COMPLAINT_TAGS,
   ASKER_PRAISE_TAGS,
+  RATING_BLIND_DAYS,
   RATING_SCORES,
 } from "@/lib/config";
 import { useStore } from "@/lib/store";
@@ -45,11 +46,11 @@ export function RatingForm({
     setScore(s);
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!score) return;
-    const r = rate({ postId, answerId, score, tags });
+    const r = await rate({ postId, answerId, score, tags });
     if (!r.ok) return setError(r.error);
-    onDone(`${targetName}님에 대한 평가가 반영되어 만족도 온도가 ${RATING_SCORES[score].delta > 0 ? "올라갔어요" : "내려갔어요"}.`);
+    onDone(`평가를 보냈어요. ${targetName}님도 평가를 남기거나 ${RATING_BLIND_DAYS}일이 지나면 만족도 온도에 반영돼요.`);
   };
 
   return (

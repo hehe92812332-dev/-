@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { CheckCircle2, Eye, Lock, MessageSquare, PenSquare, Search } from "lucide-react";
 import { CATEGORIES } from "@/lib/config";
-import { useStore } from "@/lib/store";
+import { userTier, useStore } from "@/lib/store";
 import type { Board, Post } from "@/lib/types";
+import { useIsBlocked } from "./ReportMenu";
 import { TierBadge, TokenAmount, timeAgo } from "./ui";
 
 const BOARD_META: Record<Board, { base: string; title: string; desc: string; cta: string }> = {
@@ -76,6 +77,7 @@ export function PostCard({ post }: { post: Post }) {
 
 export function PostList({ board }: { board: Board }) {
   const { posts, currentUser } = useStore();
+  const isBlocked = useIsBlocked();
   const meta = BOARD_META[board];
   const [category, setCategory] = useState<string>("전체");
   const [status, setStatus] = useState<"all" | "open" | "adopted">("all");
@@ -87,14 +89,16 @@ export function PostList({ board }: { board: Board }) {
         (p) =>
           p.board === board &&
           p.status !== "refunded" &&
+          !p.hidden &&
+          !isBlocked(p.authorId) &&
           (category === "전체" || p.category === category) &&
           (status === "all" || p.status === status) &&
           (!q || p.title.includes(q) || p.body.includes(q)),
       ),
-    [posts, board, category, status, q],
+    [posts, board, category, status, q, isBlocked],
   );
 
-  const locked = board === "clinical" && currentUser?.role !== "therapist";
+  const locked = board === "clinical" && !(currentUser && userTier(currentUser));
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:py-12">

@@ -16,7 +16,7 @@ export default function TherapistsPage() {
   const [sort, setSort] = useState<"tier" | "temp">("tier");
 
   const therapists = users
-    .filter((u) => u.therapist && (spec === "전체" || u.therapist.specialties.includes(spec as (typeof CATEGORIES)[number])))
+    .filter((u) => u.therapist?.licenseVerified && (spec === "전체" || u.therapist.specialties.includes(spec as (typeof CATEGORIES)[number])))
     .sort((a, b) =>
       sort === "temp"
         ? temperatureOf(ratings, b.id) - temperatureOf(ratings, a.id)

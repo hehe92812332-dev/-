@@ -9,6 +9,7 @@ import { quoteQuestion } from "@/lib/ledger";
 import { balanceOf, userTier, useStore } from "@/lib/store";
 import { gradeLabel, tierRank } from "@/lib/tier";
 import type { Board } from "@/lib/types";
+import { LoginRequired } from "./LoginRequired";
 import { GemIcon, Notice, TokenAmount, UserLine } from "./ui";
 
 function AskFormInner({ board }: { board: Board }) {
@@ -36,19 +37,19 @@ function AskFormInner({ board }: { board: Board }) {
       return t && tierRank(t.id) >= tierRank(tier);
     }).length;
 
-  const submit = (e: React.FormEvent) => {
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = createPost({ board, title, body, category, targetTier, directTherapistId: directId });
+    if (busy) return;
+    setBusy(true);
+    const res = await createPost({ board, title, body, category, targetTier, directTherapistId: directId });
+    setBusy(false);
     if (!res.ok) return setError(res.error);
     router.push(`${base}/${res.id}`);
   };
 
   if (!currentUser)
-    return (
-      <div className="mx-auto max-w-2xl px-4 py-12">
-        <Notice>질문을 작성하려면 로그인(우측 상단 데모 계정 선택)이 필요합니다.</Notice>
-      </div>
-    );
+    return <LoginRequired what="질문을 작성하려면" />;
 
   return (
     <form onSubmit={submit} className="mx-auto max-w-3xl px-4 py-8 md:py-12">
@@ -199,7 +200,7 @@ function AskFormInner({ board }: { board: Board }) {
               토큰 충전하기
             </Link>
           ) : (
-            <button type="submit" className="btn shrink-0 bg-brand-500 text-white hover:bg-brand-400">
+            <button type="submit" disabled={busy} className="btn shrink-0 bg-brand-500 text-white hover:bg-brand-400">
               질문 등록
             </button>
           )}

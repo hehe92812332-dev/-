@@ -6,7 +6,8 @@ import { ArrowLeft, Award, CheckCircle2, Clock, Eye, Gift, Heart, Lock, Plus, Us
 import { BOUNTY_ADD_OPTIONS, TIP_OPTIONS } from "@/lib/config";
 import { canRateAnswer, canRateAsker, rewardAfterFee } from "@/lib/ledger";
 import { RatingForm } from "./RatingForm";
-import { userTier, useStore } from "@/lib/store";
+import { ReportMenu, useIsBlocked } from "./ReportMenu";
+import { userTier, useStore, type Result } from "@/lib/store";
 import { getTier, tierRank } from "@/lib/tier";
 import { Notice, TierBadge, TokenAmount, UserLine, timeAgo } from "./ui";
 
@@ -19,13 +20,15 @@ function timeLeft(iso: string) {
 
 export function PostDetail({ id }: { id: string }) {
   const store = useStore();
-  const { posts, getUser, currentUser, viewPost, state } = store;
+  const { posts, getUser, currentUser, viewPost, state, me } = store;
   const post = posts.find((p) => p.id === id);
   const [draft, setDraft] = useState("");
   const [msg, setMsg] = useState<{ tone: "error" | "success"; text: string } | null>(null);
   const [tipFor, setTipFor] = useState<string | null>(null);
   const [showBounty, setShowBounty] = useState(false);
   const [ratingFor, setRatingFor] = useState<string | null>(null);
+  const [revealBlocked, setRevealBlocked] = useState<string[]>([]);
+  const isBlocked = useIsBlocked();
 
   useEffect(() => {
     viewPost(id);
@@ -34,7 +37,7 @@ export function PostDetail({ id }: { id: string }) {
   if (!post) return <div className="mx-auto max-w-3xl px-4 py-16 text-center text-slate-500">글을 찾을 수 없습니다.</div>;
 
   const base = post.board === "patient" ? "/qa" : "/clinical";
-  if (post.board === "clinical" && currentUser?.role !== "therapist")
+  if (post.board === "clinical" && !(currentUser && userTier(currentUser)) && !me?.isAdmin)
     return (
       <div className="mx-auto max-w-3xl px-4 py-16">
         <Notice>
@@ -58,8 +61,16 @@ export function PostDetail({ id }: { id: string }) {
     a.id === post.adoptedAnswerId ? -1 : b.id === post.adoptedAnswerId ? 1 : b.likes.length - a.likes.length,
   );
 
-  const show = (r: { ok: boolean; error?: string }, success: string) =>
-    setMsg(r.ok ? { tone: "success", text: success } : { tone: "error", text: r.error ?? "오류가 발생했습니다." });
+  const [busy, setBusy] = useState(false);
+  /** 요청을 보내고 결과 메시지를 띄웁니다. 처리 중 중복 클릭은 무시합니다. */
+  const show = async (p: Promise<Result>, success: string): Promise<Result> => {
+    if (busy) return { ok: false, error: "처리 중이에요." };
+    setBusy(true);
+    const r = await p;
+    setBusy(false);
+    setMsg(r.ok ? { tone: "success", text: success } : { tone: "error", text: r.error });
+    return r;
+  };
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 md:py-12">
@@ -86,6 +97,7 @@ export function PostDetail({ id }: { id: string }) {
           <UserLine user={author} sub={timeAgo(post.createdAt)} />
           <span className="inline-flex items-center gap-1 text-xs text-slate-400">
             <Eye className="size-3.5" /> {post.views}
+            <ReportMenu targetType="post" targetId={post.id} authorId={author.id} authorName={author.name} onMessage={(tone, text) => setMsg({ tone, text })} />
           </span>
         </div>
         <p className="mt-6 whitespace-pre-wrap leading-relaxed text-slate-700">{post.body}</p>
@@ -176,10 +188,19 @@ export function PostDetail({ id }: { id: string }) {
                   <CheckCircle2 className="size-3.5" /> {post.closedReason === "auto_adopt" ? "자동 채택" : "질문자 채택"}
                 </div>
               )}
-              <Link href={`/users/${u.id}`} className="block w-fit rounded-lg hover:opacity-80">
-                <UserLine user={u} sub={`${u.therapist?.hospitalName ?? ""} · ${timeAgo(a.createdAt)}`} />
-              </Link>
-              <p className="mt-4 whitespace-pre-wrap leading-relaxed text-slate-700">{a.body}</p>
+              <div className="flex items-start justify-between gap-2">
+                <Link href={`/users/${u.id}`} className="block w-fit rounded-lg hover:opacity-80">
+                  <UserLine user={u} sub={`${u.therapist?.hospitalName ?? ""} · ${timeAgo(a.createdAt)}`} />
+                </Link>
+                <ReportMenu targetType="answer" targetId={a.id} authorId={u.id} authorName={u.name} onMessage={(tone, text) => setMsg({ tone, text })} />
+              </div>
+              {isBlocked(u.id) && !revealBlocked.includes(a.id) ? (
+                <button onClick={() => setRevealBlocked((x) => [...x, a.id])} className="mt-4 text-sm text-slate-400 underline">
+                  차단한 회원의 답변입니다. 보기
+                </button>
+              ) : (
+                <p className="mt-4 whitespace-pre-wrap leading-relaxed text-slate-700">{a.body}</p>
+              )}
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => store.toggleLike(post.id, a.id)}
@@ -207,9 +228,11 @@ export function PostDetail({ id }: { id: string }) {
                 )}
                 {isOwner && post.status === "open" && (
                   <button
-                    onClick={() => {
-                      const r = store.adoptAnswer(post.id, a.id);
-                      show(r, `답변을 채택했어요. ${u.name} 선생님께 ${reward}토큰이 지급되었습니다. 답변 만족도도 남겨 주세요!`);
+                    onClick={async () => {
+                      const r = await show(
+                        store.adoptAnswer(post.id, a.id),
+                        `답변을 채택했어요. ${u.name} 선생님께 ${reward}토큰이 지급되었습니다. 답변 만족도도 남겨 주세요!`,
+                      );
                       if (r.ok) setRatingFor(a.id);
                     }}
                     className="btn-primary ml-auto !py-1.5 text-xs"
@@ -276,11 +299,11 @@ export function PostDetail({ id }: { id: string }) {
               <div className="mt-3 flex items-center justify-between gap-3">
                 <span className="text-xs text-slate-500">채택되면 {reward}토큰을 받아요.</span>
                 <button
-                  onClick={() => {
-                    const r = store.addAnswer(post.id, draft);
+                  onClick={async () => {
+                    const r = await show(store.addAnswer(post.id, draft), "답변이 등록되었어요.");
                     if (r.ok) setDraft("");
-                    show(r, "답변이 등록되었어요.");
                   }}
+                  disabled={busy}
                   className="btn-primary"
                 >
                   답변 등록
@@ -291,6 +314,8 @@ export function PostDetail({ id }: { id: string }) {
             <p className="mt-2 text-sm text-slate-500">
               {currentUser?.role !== "therapist"
                 ? "답변은 면허 인증된 물리치료사 회원만 작성할 수 있어요."
+                : !myTier
+                  ? "서류 심사가 끝나면 답변할 수 있어요."
                 : direct
                   ? `${direct.name} 선생님에게 온 1:1 질문이라 다른 치료사는 답변할 수 없어요.`
                   : `이 질문은 ${getTier(post.targetTier).name} 등급 이상만 답변할 수 있어요. (내 등급: ${myTier?.name})`}
