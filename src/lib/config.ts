@@ -48,6 +48,11 @@ export const SETTLEMENT_HOLD_DAYS = 3;
 export const REVOKE_DAYS = 7;
 
 /** 좋은 답변에 보내는 감사 팁 (토스·카카오 후원, 슈퍼챗 방식) */
+/** 건강 소식 원고가 검수를 통과해 게시되면 작성 치료사에게 주는 원고료 (토큰) */
+export const ARTICLE_REWARD_TOKENS = 30;
+/** 원고 제출 제한 (하루) */
+export const ARTICLE_SUBMIT_PER_DAY = 3;
+
 export const TIP_OPTIONS = [3, 5, 10] as const;
 
 /** 현상금 추가 단위 (지식iN 내공 추가 / Stack Overflow bounty 방식) */

@@ -39,6 +39,7 @@ const TX_LABEL: Record<TxType, string> = {
   balance_refund: "잔액 환불 신청",
   balance_refund_cancel: "잔액 환불 반려",
   lower_tier: "등급 변경 차액",
+  article_reward: "건강 소식 원고료",
 };
 
 type Tab = "buy" | "membership" | "withdraw";

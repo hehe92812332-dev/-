@@ -497,6 +497,18 @@ export function tip(s: State, userId: string, postId: string, answerId: string, 
   return { ok: true, state: s };
 }
 
+// ───────────────────────── 건강 소식 원고료 ─────────────────────────
+
+/** 건강 소식 원고가 검수를 통과하면 작성 치료사에게 원고료 지급 (수수료 없음) */
+export function rewardArticle(s: State, userId: string, tokens: number, title: string): Outcome {
+  const user = s.users.find((u) => u.id === userId);
+  if (!user || user.role !== "therapist") return fail("치료사 회원을 찾을 수 없습니다.");
+  if (!Number.isInteger(tokens) || tokens <= 0) return fail("원고료를 확인해 주세요.");
+  s = updateUser(s, userId, (u) => ({ ...u, wallet: addWallet(u.wallet, { earned: tokens }) }));
+  s = addTx(s, { userId, type: "article_reward", tokens, memo: `건강 소식 원고료 · ${title.slice(0, 40)}` });
+  return { ok: true, state: s };
+}
+
 // ───────────────────────── 만족도 평가 (매너온도) ─────────────────────────
 
 /** 질문자가 이 답변을 평가할 수 있는지 */

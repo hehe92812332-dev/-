@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { FileText, RefreshCw } from "lucide-react";
+import { AdminNews } from "@/components/AdminNews";
 import { Notice } from "@/components/ui";
 import { DEGREES, type Degree } from "@/lib/config";
 import { useStore } from "@/lib/store";
@@ -52,15 +53,20 @@ const DOC_LABEL: Record<string, string> = { license: "면허증", career: "경�
 const TARGET_LABEL: Record<string, string> = { post: "질문", answer: "답변", chat: "라운지 메시지", user: "회원" };
 const when = (iso: string) => new Date(iso).toLocaleString("ko-KR", { dateStyle: "short", timeStyle: "short" });
 
-type Tab = "pending" | "reports" | "withdrawals" | "orders" | "logs";
+type Tab = "pending" | "reports" | "withdrawals" | "news" | "orders" | "logs";
 
 export default function AdminPage() {
   const { serverMode, me } = useStore();
   const [data, setData] = useState<Overview | null>(null);
   const [tab, setTab] = useState<Tab>("pending");
+  const [newsQueue, setNewsQueue] = useState<number>();
   const [msg, setMsg] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
   const load = useCallback(async () => {
+    fetch("/api/admin/news")
+      .then((x) => (x.ok ? x.json() : null))
+      .then((j) => j && setNewsQueue(j.queue.length))
+      .catch(() => {});
     const r = await fetch("/api/admin/overview");
     if (r.ok) setData(await r.json());
     else setMsg({ tone: "error", text: (await r.json().catch(() => ({}))).error ?? "불러오지 못했어요." });
@@ -89,6 +95,7 @@ export default function AdminPage() {
     ["pending", "서류 심사", data?.pending.length],
     ["reports", "신고", data?.reports.length],
     ["withdrawals", "환전·환불", data?.withdrawals.length],
+    ["news", "건강 소식", newsQueue],
     ["orders", "결제 내역"],
     ["logs", "처리 기록"],
   ];
@@ -133,7 +140,11 @@ export default function AdminPage() {
         </div>
       )}
 
-      {!data ? (
+      {tab === "news" ? (
+        <div className="mt-4">
+          <AdminNews onCount={setNewsQueue} />
+        </div>
+      ) : !data ? (
         <p className="mt-10 text-center text-sm text-slate-400">불러오는 중…</p>
       ) : (
         <div className="mt-4 space-y-3">

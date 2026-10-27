@@ -3,7 +3,7 @@ import { db, schema } from "@/server/db";
 
 export async function resetDb() {
   await db.execute(sql`TRUNCATE users, posts, answers, answer_likes, transactions, ratings, chat_messages, reports, blocks,
-    payment_orders, billing_keys, withdrawal_accounts, therapist_profiles, credential_documents, accounts, admin_logs, notifications, user_tag_counts RESTART IDENTITY CASCADE`);
+    payment_orders, billing_keys, withdrawal_accounts, therapist_profiles, credential_documents, accounts, admin_logs, notifications, user_tag_counts, articles RESTART IDENTITY CASCADE`);
 }
 
 export async function makeUser(

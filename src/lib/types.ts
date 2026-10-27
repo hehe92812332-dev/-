@@ -124,7 +124,8 @@ export type TxType =
   | "withdraw_cancel"
   | "balance_refund"
   | "balance_refund_cancel"
-  | "lower_tier";
+  | "lower_tier"
+  | "article_reward";
 
 export interface Transaction {
   id: string;

@@ -16,6 +16,7 @@ import {
   Trophy,
   UserRoundCheck,
 } from "lucide-react";
+import { TodayHealthCard } from "@/components/News";
 import { PostCard } from "@/components/PostList";
 import { TierBadge, TokenAmount } from "@/components/ui";
 import { TIERS } from "@/lib/config";
@@ -107,6 +108,11 @@ export default function Home() {
             임상 토론 바로가기 <ArrowRight className="size-4 transition group-hover:translate-x-1" />
           </span>
         </Link>
+      </section>
+
+      {/* 오늘의 건강 정보 */}
+      <section className="mx-auto mt-12 max-w-6xl px-4">
+        <TodayHealthCard />
       </section>
 
       {/* How it works */}

@@ -403,3 +403,32 @@ export const notifications = pgTable(
   },
   (t) => [index("notifications_user_idx").on(t.userId, t.createdAt)],
 );
+
+// ───────────── 건강 소식 (오늘의 건강 정보) ─────────────
+
+/** 매일 한 편씩 공개되는 근골격계·신경계 건강 정보. 관리자 검수(approved) 후 publish_on 날짜(한국 기준)에 공개됩니다 */
+export const articles = pgTable(
+  "articles",
+  {
+    id: text("id").primaryKey(),
+    slug: text("slug").notNull().unique(),
+    title: text("title").notNull(),
+    category: text("category").notNull(),
+    bodyPart: text("body_part").notNull(),
+    summary: text("summary").notNull(),
+    causes: jsonb("causes").$type<string[]>().notNull(),
+    exercises: jsonb("exercises").$type<{ name: string; how: string[]; dose: string; caution?: string }[]>().notNull(),
+    redFlags: jsonb("red_flags").$type<string[]>().notNull(),
+    emergency: jsonb("emergency").$type<string[]>(),
+    tips: jsonb("tips").$type<string[]>().notNull(),
+    status: text("status").$type<"review" | "approved" | "rejected" | "archived">().notNull().default("review"),
+    /** 공개일 YYYY-MM-DD (한국 날짜) */
+    publishOn: text("publish_on"),
+    authorId: text("author_id").references(() => users.id, { onDelete: "set null" }),
+    authorName: text("author_name").notNull(),
+    reviewNote: text("review_note"),
+    views: integer("views").notNull().default(0),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("articles_status_publish_idx").on(t.status, t.publishOn), index("articles_author_idx").on(t.authorId)],
+);

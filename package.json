@@ -11,6 +11,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx --conditions=react-server --env-file=.env.local scripts/seed.ts",
+    "news:import": "tsx --conditions=react-server --env-file=.env.local scripts/news-import.ts",
     "db:backfill": "tsx --conditions=react-server --env-file=.env.local scripts/backfill.ts",
     "start:cluster": "NODE_ENV=production node scripts/cluster.cjs"
   },

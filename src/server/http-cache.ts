@@ -29,7 +29,12 @@ export async function guestCached(key: string, ttlMs: number, compute: () => Pro
 export function jsonFor(isGuest: boolean, body: unknown, sMaxAge = 15) {
   return NextResponse.json(body, {
     headers: isGuest
-      ? { "Cache-Control": `public, s-maxage=${sMaxAge}, stale-while-revalidate=60`, Vary: "Cookie" }
+      ? {
+          // 브라우저는 매번 확인(stale-while-revalidate를 브라우저에도 주면 뒤에서 재검증 요청이 계속 생김), CDN만 짧게 캐시
+          "Cache-Control": `public, max-age=0, s-maxage=${sMaxAge}, must-revalidate`,
+          "CDN-Cache-Control": `public, s-maxage=${sMaxAge}, stale-while-revalidate=60`,
+          Vary: "Cookie",
+        }
       : { "Cache-Control": "private, no-store" },
   });
 }

@@ -9,7 +9,8 @@ export type NotificationType =
   | "verification"
   | "payout"
   | "no_answer"
-  | "closed";
+  | "closed"
+  | "article";
 
 /** 알림 저장. 실서비스에서는 여기서 카카오 알림톡·이메일·푸시 발송을 함께 붙이면 됩니다. */
 export async function notify(tx: Tx, userId: string, type: NotificationType, title: string, link?: string) {

@@ -4,6 +4,7 @@ import { z } from "zod";
 import * as ledger from "@/lib/ledger";
 import { db, schema } from "@/server/db";
 import { notify } from "@/server/notify";
+import { approveArticle, rescheduleArticle, setArticleStatus } from "@/server/news";
 import { runLedger } from "@/server/runner";
 import { HttpError, handle, requireAdmin } from "@/server/session";
 
@@ -13,6 +14,10 @@ const body = z.discriminatedUnion("action", [
   z.object({ action: z.literal("resolveReport"), reportId: z.string(), decision: z.enum(["hide", "suspend", "dismiss"]), note: z.string().max(300).default("") }),
   z.object({ action: z.literal("withdrawPaid"), txId: z.string() }),
   z.object({ action: z.literal("withdrawReject"), txId: z.string(), reason: z.string().min(2).max(300) }),
+  z.object({ action: z.literal("articleApprove"), articleId: z.string(), publishOn: z.string().optional(), note: z.string().max(300).optional() }),
+  z.object({ action: z.literal("articleReject"), articleId: z.string(), reason: z.string().min(2).max(300) }),
+  z.object({ action: z.literal("articleArchive"), articleId: z.string(), reason: z.string().min(2).max(300) }),
+  z.object({ action: z.literal("articleReschedule"), articleId: z.string(), publishOn: z.string() }),
 ]);
 
 export const POST = handle(async (req: Request) => {
@@ -24,6 +29,19 @@ export const POST = handle(async (req: Request) => {
   const log = (target: string, detail = "") => async (tx: Parameters<NonNullable<Parameters<typeof runLedger>[3]>>[0]) => {
     await tx.insert(schema.adminLogs).values({ id: crypto.randomUUID(), adminId: admin.id, action: a.action, targetId: target, detail });
   };
+
+  // 건강 소식 검수
+  switch (a.action) {
+    case "articleApprove":
+      return NextResponse.json({ ok: true, ...(await approveArticle(admin.id, a.articleId, { publishOn: a.publishOn || undefined, note: a.note })) });
+    case "articleReject":
+    case "articleArchive":
+      await setArticleStatus(admin.id, a.articleId, a.action === "articleReject" ? "rejected" : "archived", a.reason);
+      return NextResponse.json({ ok: true });
+    case "articleReschedule":
+      await rescheduleArticle(admin.id, a.articleId, a.publishOn);
+      return NextResponse.json({ ok: true });
+  }
 
   let r;
   switch (a.action) {

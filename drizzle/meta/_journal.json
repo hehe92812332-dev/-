@@ -57,6 +57,13 @@
       "when": 1793099642730,
       "tag": "0007_auto_lower",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793108566480,
+      "tag": "0008_news",
+      "breakpoints": true
     }
   ]
 }

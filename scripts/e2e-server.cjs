@@ -213,6 +213,49 @@ const step = (n, ok, extra = '') => {
   const leaked = await t2.locator('button:has-text("# 자유")').click().then(() => t2.waitForTimeout(800)).then(() => t2.locator('text=근골격계 채널 테스트 메시지').count());
   step('라운지 채널 분리 + 새 글 표시', inChannel && dot === 1 && leaked === 0, `dot=${dot}`);
 
+  // 11. 건강 소식: 비회원 열람 → 치료사 원고 → 관리자 승인·예약 → 원고료 → 게시일에 공개
+  const today = sqlq("select to_char(now() at time zone 'Asia/Seoul','YYYY-MM-DD')");
+  const todays = sqlq(`select slug||'|'||title from articles where status='approved' and publish_on<='${today}' order by publish_on desc, id desc limit 1`).split('|');
+  const gctx = await b.newContext(); const guest = await gctx.newPage();
+  await guest.goto(U + '/news', { waitUntil: 'networkidle' });
+  step('건강 소식 오늘의 글', (await guest.locator(`text=${todays[1]}`).count()) > 0 && (await guest.locator('text=오늘의 건강 정보').count()) > 0, todays[0]);
+  await guest.goto(U + '/news/' + todays[0], { waitUntil: 'networkidle' });
+  step('건강 소식 상세 (비회원)', (await guest.locator('text=이럴 땐 병원에 가 보세요').count()) === 1 && (await guest.locator('text=치료사에게 질문하기').count()) === 1,
+    `views=${sqlq(`select views from articles where slug='${todays[0]}'`)}`);
+  await guest.goto(U + '/', { waitUntil: 'networkidle' });
+  step('홈 오늘의 건강 정보', await guest.locator(`a[href="/news/${todays[0]}"]`).count() > 0);
+  const patNews = await pat.request.post(U + '/api/news', { data: { title: '환자가 쓴 원고 테스트' } });
+  step('환자 원고 차단', patNews.status() === 403);
+  await t1.goto(U + '/news/write', { waitUntil: 'networkidle' });
+  await t1.fill('input[placeholder^="예: 아침마다"]', '손목이 시큰할 때 E2E 원고');
+  const ta = t1.locator('textarea');
+  await ta.nth(0).fill('컴퓨터 작업이 많은 분들의 손목 통증 원인과 운동을 정리했어요.');
+  await ta.nth(1).fill('마우스를 오래 쥐는 자세\n손목을 꺾은 채 타자 치기');
+  await t1.fill('input[placeholder="운동 이름"]', '손목 굽힘근 스트레칭');
+  await t1.fill('input[placeholder^="횟수"]', '20초 × 3회');
+  await ta.nth(2).fill('팔을 앞으로 뻗는다\n반대손으로 손가락을 몸쪽으로 당긴다');
+  await ta.nth(3).fill('밤에 손이 저려 깰 때\n엄지 쪽 근육이 마를 때');
+  await t1.click('button:has-text("검수 요청하기")');
+  await t1.waitForSelector('text=원고를 보냈어요', { timeout: 15000 }).catch(() => {});
+  const art = sqlq("select id||'|'||slug||'|'||status from articles where title='손목이 시큰할 때 E2E 원고'").split('|');
+  step('치료사 원고 제출', art[2] === 'review', art[0]);
+  const futureGuest = await gctx.request.get(U + '/api/news/' + art[1]);
+  step('검수 전 비공개', futureGuest.status() === 404);
+  const earnedBefore = Number(sqlq("select earned from users where id='u-expert'"));
+  await ad.goto(U + '/admin', { waitUntil: 'networkidle' }); await ad.click('button:has-text("건강 소식")');
+  await ad.waitForSelector('text=손목이 시큰할 때 E2E 원고');
+  const nextFree = await ad.locator('input[type=date]').first().inputValue();
+  await ad.click('button:has-text("승인하고 예약")');
+  await until(() => sqlq(`select status from articles where id='${art[0]}'`) === 'approved');
+  step('관리자 승인·예약 + 원고료', sqlq(`select publish_on from articles where id='${art[0]}'`) === nextFree &&
+    Number(sqlq("select earned from users where id='u-expert'")) === earnedBefore + 30 &&
+    sqlq("select count(*) from notifications where user_id='u-expert' and type='article'") === '1', `publish_on=${nextFree}`);
+  step('게시일 전 비공개', (await gctx.request.get(U + '/api/news/' + art[1])).status() === 404);
+  sqlq(`update articles set publish_on='${today}' where id='${art[0]}'`);
+  const pub = await gctx.request.get(U + '/api/news/' + art[1]);
+  step('게시일에 공개', pub.ok() && (await pub.json()).article.authorName.includes('물리치료사'));
+  await gctx.close();
+
   // 12. 회원 탈퇴 → 개인정보 삭제, 재로그인 세션 무효
   await nt.goto(U + '/account', { waitUntil: 'networkidle' });
   await nt.fill('input.input', '탈퇴합니다'); await nt.click('button:has-text("회원 탈퇴")');
