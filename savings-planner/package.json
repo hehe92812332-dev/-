@@ -1,0 +1,13 @@
+{
+  "name": "savings-planner",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "기간 내 목표 저축 계획 + 수입·지출 패턴 분석 웹앱",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/*.test.js",
+    "simulate": "node simulation/simulate.js",
+    "simulate:compare": "node simulation/simulate.js --compare"
+  }
+}

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>모아플랜</title>
+<meta name="description" content="정해진 기간 안에 목표 금액을 모으는 저축 계획과 수입·지출 분석, 지출 계획을 만들어 줍니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!--BODY-START-->
+<header class="top">
+  <div class="wrap top-inner">
+    <div class="brand">
+      <span class="seal" aria-hidden="true">모</span>
+      <div>
+        <strong>모아플랜</strong>
+        <span>기간 안에 목표 금액 모으기</span>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button type="button" class="ghost" id="btn-sample">예시 불러오기</button>
+      <button type="button" class="ghost" id="btn-reset">새로 입력</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap layout">
+  <form id="plan-form" class="inputs" novalidate>
+    <p class="sample-note" id="sample-note">지금 보이는 값은 <b>예시</b>입니다. 내 정보로 바꾸면 바로 다시 계산돼요.</p>
+
+    <fieldset>
+      <legend><span class="step">1</span>목표</legend>
+      <div class="grid2">
+        <label class="field span2">목표 이름
+          <input id="goalName" placeholder="예: 전세 보증금, 결혼 자금" autocomplete="off">
+        </label>
+        <label class="field">목표 금액
+          <input id="goalAmount" inputmode="numeric" placeholder="3천만원 또는 30000000" autocomplete="off">
+          <small class="hint" data-for="goalAmount"></small>
+        </label>
+        <label class="field">지금 모아둔 돈
+          <input id="currentSavings" inputmode="numeric" placeholder="없으면 비워 두세요" autocomplete="off">
+          <small class="hint" data-for="currentSavings"></small>
+        </label>
+      </div>
+      <div class="seg" role="radiogroup" aria-label="기간 입력 방식">
+        <label><input type="radio" name="periodMode" value="months" id="pm-months" checked> 개월 수로</label>
+        <label><input type="radio" name="periodMode" value="date" id="pm-date"> 목표 날짜로</label>
+      </div>
+      <div class="grid2">
+        <label class="field" id="f-months">기간 (개월)
+          <input id="months" type="number" min="1" max="600" inputmode="numeric">
+        </label>
+        <label class="field" id="f-date" hidden>목표 날짜
+          <input id="targetDate" type="month">
+        </label>
+        <label class="field">예·적금 연이율 (%)
+          <input id="annualRate" inputmode="decimal" placeholder="예: 3.5">
+        </label>
+      </div>
+      <label class="check"><input type="checkbox" id="taxFree"> 비과세 상품이에요 (이자소득세 15.4% 미적용)</label>
+    </fieldset>
+
+    <fieldset>
+      <legend><span class="step">2</span>수입</legend>
+      <div class="grid2">
+        <label class="field">월 실수령액
+          <input id="incomeMonthly" inputmode="numeric" placeholder="세금 뗀 금액" autocomplete="off">
+          <small class="hint" data-for="incomeMonthly"></small>
+        </label>
+        <div class="field">수입 형태
+          <div class="seg compact" role="radiogroup" aria-label="수입 형태">
+            <label><input type="radio" name="incomeType" value="fixed" id="it-fixed" checked> 매달 비슷함</label>
+            <label><input type="radio" name="incomeType" value="variable" id="it-var"> 들쭉날쭉</label>
+          </div>
+        </div>
+      </div>
+      <div id="income-history" hidden>
+        <p class="help">최근 6개월 실제 수입을 넣으면 수입이 적은 달도 버틸 수 있는 금액으로 계획합니다.</p>
+        <div class="hist6" id="income-hist-inputs"></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend><span class="step">3</span>지출</legend>
+      <p class="help">카드·통장 내역으로 <b>최근 3개월</b>을 넣으면 평균과 추세를 분석해 더 정확해집니다. 기억으로 적으면 실제보다 적게 잡히기 쉬워 여유분을 따로 남겨요.</p>
+      <div class="exp-head" aria-hidden="true"><span>항목</span><span>유형</span><span>한 달 금액</span><span></span></div>
+      <div id="expense-rows"></div>
+      <button type="button" class="ghost add" id="btn-add-exp">+ 지출 항목 추가</button>
+    </fieldset>
+  </form>
+
+  <section class="results" id="results" aria-live="polite"></section>
+</main>
+
+<footer class="wrap foot">
+  <p>모아플랜의 계산은 참고용입니다. 실제 금리·세금은 가입 상품의 약관을 확인하세요. 입력값은 이 브라우저에만 저장됩니다.</p>
+</footer>
+<!--BODY-END-->
+<script type="module" src="app.js"></script>
+</body>
+</html>
