@@ -1,0 +1,28 @@
+{
+  "N": 300000,
+  "features": {
+    "glossary": false,
+    "tts": false,
+    "counter": false,
+    "gear": false,
+    "fallCheck": false,
+    "carerBody": false,
+    "badDay": false,
+    "weekLog": false,
+    "textSize": true,
+    "pictures": false
+  },
+  "issues": {
+    "want_pictures": 157603,
+    "lose_count": 143232,
+    "jargon": 133631,
+    "cant_read": 105921,
+    "bad_day": 101114,
+    "no_progress": 100785,
+    "no_gear": 94703,
+    "carer_back": 45354,
+    "overrated_level": 21509,
+    "small_text": 0
+  },
+  "anyBlocked": 291676
+}

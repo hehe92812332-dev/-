@@ -19,6 +19,7 @@ python3 -m http.server 8000   # http://localhost:8000
 | `data.js` | 질환별 단계 · 운동(혼자/보호자 방법) · 운동량 · 주의사항 · 근거 문헌 22편 |
 | `app.js` | 화면 그리기, 단계 찾기 질문, 혼자/보호자 전환, '오늘 했어요' 기록, 인쇄 |
 | `styles.css` | 디자인 (기본 글자 18px, 글자 크게 보기 지원) |
+| `sim/simulate-feedback.mjs` | 가상 사용자 30만 명 시뮬레이션 (실제 설문 아님) — 결과는 `docs/feedback-simulation.md` |
 
 ## 단계 기준
 

@@ -136,7 +136,7 @@
         <p class="crumb"><a href="#/">처음</a> / ${c.name}</p>
         <h1 class="cond-title">${c.name} 홈 트레이닝</h1>
         <p class="cond-intro">${c.lede}</p>
-        <p class="cond-measure"><strong>단계 기준</strong> ${c.measure}. ${c.measureNote} ${refLinks(c.basis)}</p>
+        <p class="cond-measure"><strong>단계 기준</strong> ${gloss(c.measure + ". " + c.measureNote)} ${refLinks(c.basis)}</p>
       </section>
 
       <section class="wrap level-pick">
@@ -177,7 +177,7 @@
         </div>`;
       box.querySelectorAll("[data-a]").forEach((b) =>
         b.addEventListener("click", () => {
-          if (b.dataset.a === "yes") return done(item.level);
+          if (b.dataset.a === "yes") return item.check ? confirm(item) : done(item.level);
           i += 1;
           if (i >= c.quiz.length) return done(fallback);
           ask();
@@ -185,34 +185,104 @@
         })
       );
     }
+    // 혼자 걷는다고 답해도 최근에 넘어졌다면 한 단계 낮춰 안내합니다
+    function confirm(item) {
+      box.innerHTML = `
+        <div class="quiz-card" role="group" aria-labelledby="quiz-q">
+          <p class="quiz-count">확인 질문</p>
+          <p class="quiz-q" id="quiz-q">${item.check.q}</p>
+          <div class="quiz-btns">
+            <button class="btn btn--solid" type="button" data-a="yes">예</button>
+            <button class="btn btn--line" type="button" data-a="no">아니요</button>
+          </div>
+        </div>`;
+      box.querySelector('[data-a="yes"]').addEventListener("click", () => {
+        store.set("fellNote:" + id, true);
+        done(item.check.level);
+      });
+      box.querySelector('[data-a="no"]').addEventListener("click", () => {
+        store.set("fellNote:" + id, false);
+        done(item.level);
+      });
+    }
     function done(n) {
       location.hash = `#/c/${id}/${n}`;
     }
     open ? ask() : closed();
   }
 
+  function dateKey(offset) {
+    const d = new Date();
+    d.setDate(d.getDate() - offset);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function weekLogHTML(id, level, total) {
+    const names = ["일", "월", "화", "수", "목", "금", "토"];
+    const cells = [];
+    for (let k = 6; k >= 0; k--) {
+      const key = dateKey(k);
+      let n = 0;
+      for (let i = 0; i < total; i++) if (store.get(`done:${key}:${id}:${level}:${i}`, false)) n++;
+      const d = new Date(); d.setDate(d.getDate() - k);
+      cells.push(`<li class="${n === 0 ? "" : n >= total ? "is-full" : "is-part"}" title="${key}"><span>${k === 0 ? "오늘" : names[d.getDay()]}</span><b>${n}</b></li>`);
+    }
+    return `
+      <div class="week-log" aria-label="지난 7일 동안 한 운동 수">
+        <p class="week-log-t">지난 7일 기록 <span>(하루 ${total}가지 중 한 개수)</span></p>
+        <ol>${cells.join("")}</ol>
+      </div>`;
+  }
+
+  function gearHTML(id, level) {
+    const g = GEAR[id] && GEAR[id][level - 1];
+    if (!g) return "";
+    return `
+      <div class="gear">
+        <h3 class="h3">준비물</h3>
+        <ul>${g.map(([name, alt]) => `<li><span class="gear-n">${name}</span>${alt && alt !== "—" ? `<span class="gear-alt">없으면 ${alt}</span>` : ""}</li>`).join("")}</ul>
+      </div>`;
+  }
+
   function programHTML(id, c, lv, level) {
     const m = MODES[mode];
     const days = ["월", "화", "수", "목", "금", "토", "일"];
+    const badDay = store.get("badday:" + todayKey, false);
+    const fell = store.get("fellNote:" + id, false);
     const ex = lv.exercises.map((e, idx) => exerciseHTML(id, level, e, idx)).join("");
 
-    return `
+    return gloss(`
       <div class="modebar" role="region" aria-label="운동 방식">
         <div class="wrap modebar-row">
           <div class="seg" role="radiogroup" aria-label="운동 방식 고르기">
             <button type="button" role="radio" class="seg-btn ${mode === "alone" ? "is-on" : ""}" aria-checked="${mode === "alone"}" data-mode="alone">혼자 해요</button>
             <button type="button" role="radio" class="seg-btn ${mode === "carer" ? "is-on" : ""}" aria-checked="${mode === "carer"}" data-mode="carer">보호자와 해요</button>
           </div>
+          <label class="bad-day-toggle">
+            <input type="checkbox" id="bad-day" ${badDay ? "checked" : ""}>
+            <span>오늘은 힘든 날</span>
+          </label>
           <button type="button" class="link-btn" id="print">인쇄하기</button>
         </div>
       </div>
 
-      <section class="wrap program mode-${mode}">
+      <section class="wrap program mode-${mode} ${badDay ? "is-bad-day" : ""}">
         <header class="prog-head">
-          <h2 class="prog-title">${level}단계 · ${lv.title}</h2>
-          <p class="prog-who">${lv.who}</p>
-          <p class="prog-goal"><strong>목표</strong> ${lv.goal}</p>
+          <div>
+            <h2 class="prog-title">${level}단계 · ${lv.title}</h2>
+            <p class="prog-who">${lv.who}</p>
+            <p class="prog-goal"><strong>목표</strong> ${lv.goal}</p>
+          </div>
+          ${weekLogHTML(id, level, lv.exercises.length)}
         </header>
+
+        ${fell && level < c.levels.length && !(c.quizFallback) ? `<p class="fell-note">최근에 넘어진 적이 있다고 답하셔서 한 단계 낮춰 안내했습니다. 담당 치료사와 상의한 뒤 다음 단계로 올라가세요.</p>` : ""}
+
+        ${badDay ? `
+        <aside class="bad-day">
+          <h3 class="h3">힘든 날에는 이렇게 줄이세요</h3>
+          <ul>${BAD_DAY.map((r) => `<li>${r}</li>`).join("")}</ul>
+        </aside>` : ""}
 
         <div class="prog-grid">
           <dl class="fitt">
@@ -232,7 +302,12 @@
           <ul>${m.rules.map((r) => `<li>${r}</li>`).join("")}</ul>
         </aside>
 
-        <h3 class="h3 ex-heading">오늘의 운동 <span class="ex-count">${lv.exercises.length}가지, 순서대로</span></h3>
+        ${gearHTML(id, level)}
+
+        <div class="ex-headrow">
+          <h3 class="h3 ex-heading">오늘의 운동 <span class="ex-count">${lv.exercises.length}가지, 순서대로</span></h3>
+          <button type="button" class="btn btn--solid" data-follow="0">처음부터 따라 하기</button>
+        </div>
         <ol class="ex-list">${ex}</ol>
 
         <aside class="cautions">
@@ -241,7 +316,7 @@
           <p><a href="#/safety">운동을 멈춰야 할 때 전체 보기</a></p>
         </aside>
       </section>
-    `;
+    `);
   }
 
   function exerciseHTML(id, level, e, idx) {
@@ -266,8 +341,13 @@
             ${unsafe ? `<span class="ex-flag">대체 동작</span>` : ""}
           </summary>
           <div class="ex-body">
+            ${e.fig ? `<figure class="ex-fig"><img src="${e.fig}" alt="${e.name} 자세" loading="lazy"></figure>` : ""}
             <p class="ex-aim">${e.aim}</p>
             ${unsafe ? `<p class="ex-warn">${e.alone.instead}</p>` : ""}
+            <div class="ex-tools">
+              <button type="button" class="tool-btn" data-follow="${idx}">따라 하기 (횟수·타이머)</button>
+              <button type="button" class="tool-btn tts-only" data-speak="${idx}">소리로 듣기</button>
+            </div>
             <ol class="ex-steps">${part.steps.map((s) => `<li>${s}</li>`).join("")}</ol>
             ${extra}
             <p class="ex-stop"><strong>멈출 때</strong> ${e.stop}</p>
@@ -308,6 +388,229 @@
       document.querySelectorAll(".ex details").forEach((d) => { d.open = true; });
       window.print();
     });
+    const bd = document.getElementById("bad-day");
+    if (bd) bd.addEventListener("change", () => {
+      store.set("badday:" + todayKey, bd.checked);
+      rerender(id, level);
+      document.getElementById("bad-day").focus();
+    });
+    document.querySelectorAll("[data-follow]").forEach((b) =>
+      b.addEventListener("click", () => openFollow(id, level, Number(b.dataset.follow), b))
+    );
+    document.querySelectorAll("[data-speak]").forEach((b) =>
+      b.addEventListener("click", () => speak(exerciseSpeech(CONDITIONS[id].levels[level - 1].exercises[Number(b.dataset.speak)])))
+    );
+  }
+
+  function rerender(id, level) {
+    const c = CONDITIONS[id];
+    const open = [...document.querySelectorAll(".ex details")].map((d) => d.open);
+    document.getElementById("program").innerHTML = programHTML(id, c, c.levels[level - 1], level);
+    document.querySelectorAll(".ex details").forEach((d, i) => { d.open = open[i]; });
+    bindProgram(id, level);
+  }
+
+  /* ── 쉬운 말 풀이 ── */
+  const TERMS = Object.keys(GLOSSARY).sort((a, b) => b.length - a.length);
+  const termRe = new RegExp("(" + TERMS.map((t) => t.replace(/[.*+?^${}()|[\]\\&]/g, "\\$&")).join("|") + ")", "g");
+  function gloss(html) {
+    let inButton = 0;
+    return html.split(/(<[^>]+>)/).map((part) => {
+      if (part.startsWith("<")) {
+        if (/^<button/.test(part)) inButton++;
+        if (/^<\/button/.test(part)) inButton--;
+        return part;
+      }
+      if (inButton > 0) return part;
+      return part.replace(termRe, (t) => `<button type="button" class="term" data-term="${t}" aria-expanded="false">${t}</button>`);
+    }).join("");
+  }
+
+  const pop = document.createElement("div");
+  pop.className = "gloss-pop";
+  pop.setAttribute("role", "tooltip");
+  pop.id = "gloss-pop";
+  pop.hidden = true;
+  document.body.appendChild(pop);
+  let popFor = null;
+  function closePop() {
+    pop.hidden = true;
+    if (popFor) popFor.setAttribute("aria-expanded", "false");
+    popFor = null;
+  }
+  document.addEventListener("click", (ev) => {
+    const t = ev.target.closest(".term");
+    if (!t) { if (!ev.target.closest(".gloss-pop")) closePop(); return; }
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (popFor === t) return closePop();
+    closePop();
+    pop.innerHTML = `<strong>${t.dataset.term}</strong> ${GLOSSARY[t.dataset.term]}`;
+    pop.hidden = false;
+    const r = t.getBoundingClientRect();
+    const w = Math.min(320, window.innerWidth - 32);
+    pop.style.width = w + "px";
+    pop.style.left = Math.max(16, Math.min(r.left + window.scrollX, window.scrollX + window.innerWidth - w - 16)) + "px";
+    pop.style.top = (r.bottom + window.scrollY + 8) + "px";
+    t.setAttribute("aria-expanded", "true");
+    t.setAttribute("aria-describedby", "gloss-pop");
+    popFor = t;
+  }, true);
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") closePop(); });
+
+  /* ── 소리로 듣기 ── */
+  const canSpeak = "speechSynthesis" in window;
+  if (!canSpeak) document.documentElement.classList.add("no-tts");
+  function speak(text) {
+    if (!canSpeak) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "ko-KR";
+    u.rate = 0.9;
+    window.speechSynthesis.speak(u);
+  }
+  function exerciseSpeech(e) {
+    const part = mode === "alone" ? e.alone : e.carer;
+    const unsafe = mode === "alone" && e.alone.safe === false;
+    return [
+      e.name + ". " + e.dose + ".",
+      unsafe ? e.alone.instead : "",
+      ...part.steps.map((s, i) => `${i + 1}. ${s}`),
+      "멈출 때. " + e.stop,
+    ].join(" ").replace(/[·—×]/g, (m) => (m === "×" ? " 곱하기 " : " "));
+  }
+
+  /* ── 따라 하기: 한 동작씩 크게, 횟수 세기와 타이머 ── */
+  function beep() {
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ac.createOscillator();
+      o.frequency.value = 880;
+      o.connect(ac.destination);
+      o.start();
+      o.stop(ac.currentTime + 0.35);
+    } catch (e) { /* 소리 불가 */ }
+    if (navigator.vibrate) navigator.vibrate(300);
+  }
+
+  function openFollow(id, level, start, opener) {
+    const lv = CONDITIONS[id].levels[level - 1];
+    let idx = start;
+    let reps = 0;
+    let sets = 0;
+    let timer = null;
+
+    const ov = document.createElement("div");
+    ov.className = "follow mode-" + mode;
+    ov.setAttribute("role", "dialog");
+    ov.setAttribute("aria-modal", "true");
+    ov.setAttribute("aria-labelledby", "follow-t");
+    document.body.appendChild(ov);
+    document.body.classList.add("has-follow");
+
+    function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
+    function runTimer(sec, label) {
+      stopTimer();
+      const out = ov.querySelector(".rest-timer");
+      let left = sec;
+      out.hidden = false;
+      out.textContent = `${label} ${left}초`;
+      timer = setInterval(() => {
+        left -= 1;
+        out.textContent = left > 0 ? `${label} ${left}초` : `${label} 끝`;
+        if (left <= 0) {
+          stopTimer();
+          beep();
+          if (canSpeak) speak(label + " 끝");
+        }
+      }, 1000);
+    }
+
+    function draw() {
+      stopTimer();
+      const e = lv.exercises[idx];
+      const part = mode === "alone" ? e.alone : e.carer;
+      const unsafe = mode === "alone" && e.alone.safe === false;
+      ov.innerHTML = `
+        <div class="follow-in">
+          <div class="follow-top">
+            <span>운동 ${idx + 1} / ${lv.exercises.length} · ${MODES[mode].label}</span>
+            <button type="button" class="link-btn" data-f="close">닫기</button>
+          </div>
+          <h2 class="follow-name" id="follow-t">${e.name}</h2>
+          <p class="follow-dose">${e.dose}</p>
+          ${unsafe ? `<p class="ex-warn">${e.alone.instead}</p>` : ""}
+          <ol class="follow-steps">${part.steps.map((s) => `<li>${gloss(s)}</li>`).join("")}</ol>
+          <p class="ex-stop"><strong>멈출 때</strong> ${e.stop}</p>
+
+          <div class="follow-pad">
+            <button type="button" class="count-btn" data-count aria-live="polite">
+              <span class="count-n">${reps}</span><span class="count-l">회 — 누를 때마다 하나</span>
+            </button>
+            <div class="follow-side">
+              <p class="set-n" aria-live="polite">끝낸 세트 <b>${sets}</b></p>
+              <button type="button" class="tool-btn" data-f="set">세트 끝 · 1분 쉬기</button>
+              <button type="button" class="tool-btn" data-f="hold">30초 재기</button>
+              <button type="button" class="tool-btn" data-f="reset">횟수 다시</button>
+              <button type="button" class="tool-btn tts-only" data-f="speak">소리로 듣기</button>
+            </div>
+          </div>
+          <p class="rest-timer" aria-live="assertive" hidden></p>
+
+          <div class="follow-nav">
+            <button type="button" class="btn btn--line" data-f="prev" ${idx === 0 ? "disabled" : ""}>이전 운동</button>
+            <button type="button" class="btn btn--solid" data-f="next">${idx === lv.exercises.length - 1 ? "다 했어요" : "이 운동 끝, 다음으로"}</button>
+          </div>
+        </div>`;
+      ov.querySelector("[data-count]").addEventListener("click", () => {
+        reps += 1;
+        ov.querySelector(".count-n").textContent = reps;
+      });
+      ov.querySelectorAll("[data-f]").forEach((b) => b.addEventListener("click", () => act(b.dataset.f)));
+      ov.querySelector("[data-count]").focus();
+    }
+
+    function act(f) {
+      const e = lv.exercises[idx];
+      if (f === "close") return close();
+      if (f === "speak") return speak(exerciseSpeech(e));
+      if (f === "reset") { reps = 0; ov.querySelector(".count-n").textContent = 0; return; }
+      if (f === "hold") return runTimer(30, "버티기");
+      if (f === "set") {
+        sets += 1; reps = 0;
+        ov.querySelector(".count-n").textContent = 0;
+        ov.querySelector(".set-n b").textContent = sets;
+        return runTimer(60, "쉬는 시간");
+      }
+      if (f === "prev") { idx -= 1; reps = 0; sets = 0; return draw(); }
+      if (f === "next") {
+        store.set(`done:${todayKey}:${id}:${level}:${idx}`, true);
+        if (idx === lv.exercises.length - 1) return close();
+        idx += 1; reps = 0; sets = 0;
+        return draw();
+      }
+    }
+
+    function onKey(ev) {
+      if (ev.key === "Escape") return close();
+      if (ev.key !== "Tab") return;
+      const f = [...ov.querySelectorAll("button:not([disabled])")].filter((b) => b.offsetParent !== null);
+      if (!f.length) return;
+      if (ev.shiftKey && document.activeElement === f[0]) { ev.preventDefault(); f[f.length - 1].focus(); }
+      else if (!ev.shiftKey && document.activeElement === f[f.length - 1]) { ev.preventDefault(); f[0].focus(); }
+    }
+    function close() {
+      stopTimer();
+      if (canSpeak) window.speechSynthesis.cancel();
+      document.removeEventListener("keydown", onKey);
+      ov.remove();
+      document.body.classList.remove("has-follow");
+      rerender(id, level);
+      const back = document.querySelector(`[data-follow="${opener ? opener.dataset.follow : 0}"]`);
+      if (back) back.focus();
+    }
+    document.addEventListener("keydown", onKey);
+    draw();
   }
 
   /* ── 안전 수칙 ── */
@@ -339,7 +642,7 @@
           ${ORDER.map((id) => `
             <div class="by-cond-item">
               <h3 class="h3"><a href="#/c/${id}">${CONDITIONS[id].name}</a></h3>
-              <ul>${CONDITIONS[id].cautions.map((x) => `<li>${x}</li>`).join("")}</ul>
+              <ul>${gloss(CONDITIONS[id].cautions.map((x) => `<li>${x}</li>`).join(""))}</ul>
             </div>`).join("")}
         </div>
       </section>`;

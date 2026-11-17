@@ -1,0 +1,28 @@
+{
+  "N": 300000,
+  "features": {
+    "glossary": true,
+    "tts": true,
+    "counter": true,
+    "gear": true,
+    "fallCheck": true,
+    "carerBody": true,
+    "badDay": true,
+    "weekLog": true,
+    "textSize": true,
+    "pictures": false
+  },
+  "issues": {
+    "want_pictures": 157603,
+    "overrated_level": 0,
+    "jargon": 0,
+    "cant_read": 0,
+    "lose_count": 0,
+    "no_gear": 0,
+    "carer_back": 0,
+    "bad_day": 0,
+    "no_progress": 0,
+    "small_text": 0
+  },
+  "anyBlocked": 157603
+}
