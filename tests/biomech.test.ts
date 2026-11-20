@@ -21,6 +21,17 @@ describe("체형 입력", () => {
     const r = simulate({ body: { ...standardBody(175), torsoCm: Number.NaN, legDiffCm: -20 } }, "high-bar-squat", { frames: 12, reference: false });
     expect(r.frames.every((f) => Number.isFinite(f.com[1]))).toBe(true);
   });
+  it("예전 형식(다리 길이·무릎 높이·팔 길이) 입력을 분절로 바꿔 읽는다", () => {
+    const { profile, issues } = sanitizeProfile({ body: { heightCm: 175, legCm: 92.8, kneeCm: 49.9, armCm: 77 } as never });
+    expect(profile.body.thighCm).toBeCloseTo(42.9, 1);
+    expect(profile.body.upperArmCm + profile.body.forearmCm + profile.body.handCm).toBeCloseTo(77, 0);
+    expect(issues.filter((i) => !i.notice)).toHaveLength(0);
+  });
+  it("위팔·아래팔을 따로 넣으면 그대로 분절 길이가 된다", () => {
+    const b = buildBody(sanitizeProfile({ body: { ...standardBody(175), upperArmCm: 34, forearmCm: 27 } }).profile);
+    expect(b.upperArm).toBeCloseTo(0.34, 3);
+    expect(b.forearm).toBeCloseTo(0.27, 3);
+  });
   it("다리 길이 차이는 넙다리·정강이에 나뉘어 반영된다", () => {
     const b = buildBody(sanitizeProfile({ body: { ...standardBody(175), legDiffCm: 2 } }).profile);
     expect(b.thigh[0] + b.shank[0] - (b.thigh[1] + b.shank[1])).toBeCloseTo(0.02, 4);
@@ -50,7 +61,7 @@ describe("모든 동작", () => {
 describe("체형 → 보상 방향", () => {
   it("넙다리가 길면 하이바 스쿼트에서 몸통이 더 숙여진다", () => {
     const std = standardBody(175);
-    expect(metric("high-bar-squat", "trunk", { body: { ...std, kneeCm: std.kneeCm * 0.9 } })).toBeGreaterThan(metric("high-bar-squat", "trunk", { body: std }) + 3);
+    expect(metric("high-bar-squat", "trunk", { body: { ...std, thighCm: std.thighCm * 1.08, shankCm: std.shankCm * 0.92 } })).toBeGreaterThan(metric("high-bar-squat", "trunk", { body: std }) + 3);
   });
   it("발목이 뻣뻣하면 프론트 스쿼트 몸통이 숙여지고 경고가 나온다", () => {
     const r = simulate({ mobility: { ankleDF: 18 } as never }, "front-squat", { frames: 24, reference: false });
@@ -58,7 +69,7 @@ describe("체형 → 보상 방향", () => {
   });
   it("팔이 길면 좌전굴 기록이 좋아진다", () => {
     const std = standardBody(175);
-    expect(metric("sit-and-reach", "reach", { body: { ...std, armCm: std.armCm + 5 } })).toBeGreaterThan(metric("sit-and-reach", "reach", { body: std }) + 2);
+    expect(metric("sit-and-reach", "reach", { body: { ...std, upperArmCm: std.upperArmCm + 2.5, forearmCm: std.forearmCm + 2.5 } })).toBeGreaterThan(metric("sit-and-reach", "reach", { body: std }) + 2);
   });
   it("파워가 높으면 제자리멀리뛰기 기록이 늘어난다", () => {
     expect(metric("standing-long-jump", "dist", { capacity: { power: 80, control: 60, asym: 0 } })).toBeGreaterThan(metric("standing-long-jump", "dist"));
@@ -85,5 +96,16 @@ describe("체형 → 보상 방향", () => {
   it("다리 길이 차이가 있으면 좌우 하중 차이를 알려 준다", () => {
     const r = simulate({ body: { ...standardBody(175), legDiffCm: 2.5 } }, "high-bar-squat", { frames: 24, reference: false });
     expect(r.findings.some((f) => f.id === "lr-shift" || f.id === "obliq")).toBe(true);
+  });
+  it("부위별 부상 위험: 기본 체형은 높음이 없고, 뻣뻣하고 조절이 약하면 허리·무릎이 높아진다", () => {
+    for (const id of ["high-bar-squat", "deadlift", "sprint-max", "drop-landing"]) {
+      const r = simulate({}, id, { frames: 24, reference: false });
+      expect(r.injury.filter((x) => x.level === "high").map((x) => `${id}:${x.region}`)).toEqual([]);
+    }
+    const risky = { mobility: { ankleDF: 20, hamstring: 55, hipFlex: 105, shoulderFlex: 145, thoracicRot: 30 }, capacity: { power: 40, control: 20, asym: 15 } };
+    const sq = simulate(risky, "high-bar-squat", { frames: 24, reference: false });
+    expect(sq.injury.find((x) => x.region === "lumbar")!.score).toBeGreaterThanOrEqual(60);
+    expect(sq.injury.find((x) => x.region === "knee")!.score).toBeGreaterThanOrEqual(60);
+    for (const x of sq.injury) expect(x.factors.reduce((a, f) => a + f.points, 0)).toBeGreaterThanOrEqual(x.score);
   });
 });

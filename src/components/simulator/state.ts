@@ -10,9 +10,11 @@ const ORDER: [keyof Profile, string][] = [
   ["body", "heightCm"],
   ["body", "weightKg"],
   ["body", "footMm"],
-  ["body", "armCm"],
-  ["body", "legCm"],
-  ["body", "kneeCm"],
+  ["body", "thighCm"],
+  ["body", "shankCm"],
+  ["body", "upperArmCm"],
+  ["body", "forearmCm"],
+  ["body", "handCm"],
   ["body", "torsoCm"],
   ["body", "shoulderCm"],
   ["body", "hipCm"],
@@ -29,14 +31,14 @@ const ORDER: [keyof Profile, string][] = [
 
 export function encodeProfile(p: Profile): string {
   const nums = ORDER.map(([g, k]) => String(Math.round(((p[g] as unknown as Record<string, number>)[k] ?? 0) * 10) / 10));
-  return [p.body.sex, ...nums].join("_");
+  return ["2" + p.body.sex, ...nums].join("_");
 }
 
 export function decodeProfile(s: string | null | undefined): Profile | null {
   if (!s) return null;
   const parts = s.split("_");
-  if (parts.length !== ORDER.length + 1) return null;
-  const sex = parts[0] === "f" ? "f" : "m";
+  if (parts.length !== ORDER.length + 1 || !parts[0].startsWith("2")) return null; // 예전 형식 링크는 무시
+  const sex = parts[0].endsWith("f") ? "f" : "m";
   const p = defaultProfile();
   p.body.sex = sex;
   ORDER.forEach(([g, k], i) => {
@@ -81,9 +83,11 @@ export function rescaleBody(p: Profile, heightCm: number): Profile {
       heightCm,
       weightKg: r(old.weightKg * (heightCm / old.heightCm) ** 2),
       footMm: Math.round(((std1.footMm * k("footMm")) / 5)) * 5,
-      armCm: r(std1.armCm * k("armCm")),
-      legCm: r(std1.legCm * k("legCm")),
-      kneeCm: r(std1.kneeCm * k("kneeCm")),
+      thighCm: r(std1.thighCm * k("thighCm")),
+      shankCm: r(std1.shankCm * k("shankCm")),
+      upperArmCm: r(std1.upperArmCm * k("upperArmCm")),
+      forearmCm: r(std1.forearmCm * k("forearmCm")),
+      handCm: r(std1.handCm * k("handCm")),
       torsoCm: r(std1.torsoCm * k("torsoCm")),
       shoulderCm: r(std1.shoulderCm * k("shoulderCm")),
       hipCm: r(std1.hipCm * k("hipCm")),

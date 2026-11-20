@@ -9,12 +9,16 @@ export interface BodyInput {
   weightKg: number;
   /** 발 길이(신발 사이즈, mm) */
   footMm: number;
-  /** 어깨 끝(견봉) ~ 가운뎃손가락 끝 */
-  armCm: number;
-  /** 바닥 ~ 대전자(골반 옆 튀어나온 뼈) = 고관절 높이 */
-  legCm: number;
-  /** 바닥 ~ 무릎 관절선 */
-  kneeCm: number;
+  /** 넙다리(대퇴): 대전자(골반 옆 튀어나온 뼈) ~ 무릎 관절선 */
+  thighCm: number;
+  /** 정강이(하퇴): 무릎 관절선 ~ 안쪽 복사뼈 */
+  shankCm: number;
+  /** 위팔: 어깨 끝(견봉) ~ 팔꿈치 바깥 뼈 */
+  upperArmCm: number;
+  /** 아래팔: 팔꿈치 ~ 손목(경상돌기) */
+  forearmCm: number;
+  /** 손: 손목 주름 ~ 가운뎃손가락 끝 */
+  handCm: number;
   /** 대전자 ~ 어깨 끝 높이 차 */
   torsoCm: number;
   /** 어깨너비(견봉~견봉) */
@@ -61,9 +65,11 @@ export function standardBody(heightCm = 175, sex: Sex = "m", weightKg?: number):
     heightCm: H,
     weightKg: weightKg ?? Math.round((sex === "m" ? 22.5 : 21) * (H / 100) ** 2),
     footMm: Math.round(H * (sex === "m" ? 1.53 : 1.5) / 5) * 5,
-    armCm: round1(H * 0.44),
-    legCm: round1(H * 0.53),
-    kneeCm: round1(H * 0.285),
+    thighCm: round1(H * 0.245),
+    shankCm: round1(H * 0.246),
+    upperArmCm: round1(H * 0.186),
+    forearmCm: round1(H * 0.146),
+    handCm: round1(H * 0.108),
     torsoCm: round1(H * 0.288),
     shoulderCm: round1(H * (sex === "m" ? 0.232 : 0.222)),
     hipCm: round1(H * (sex === "m" ? 0.165 : 0.178)),
@@ -74,6 +80,35 @@ export function standardBody(heightCm = 175, sex: Sex = "m", weightKg?: number):
 export const defaultMobility = (): Mobility => ({ ankleDF: 38, hipFlex: 125, hamstring: 80, shoulderFlex: 170, thoracicRot: 45 });
 export const defaultCapacity = (): Capacity => ({ power: 50, control: 60, asym: 0 });
 export const defaultProfile = (): Profile => ({ body: standardBody(), mobility: defaultMobility(), capacity: defaultCapacity() });
+
+/** 발목 관절 높이 (cm) */
+export const ankleHeightCm = (b: Pick<BodyInput, "heightCm">) => 0.039 * b.heightCm;
+/** 고관절(대전자) 높이 = 넙다리 + 정강이 + 발목 높이 */
+export const legLengthCm = (b: BodyInput) => b.thighCm + b.shankCm + ankleHeightCm(b);
+/** 무릎 높이 */
+export const kneeHeightCm = (b: BodyInput) => b.shankCm + ankleHeightCm(b);
+/** 팔 전체 (견봉 ~ 가운뎃손가락 끝) */
+export const armLengthCm = (b: BodyInput) => b.upperArmCm + b.forearmCm + b.handCm;
+
+/** 예전 입력(다리 길이·무릎 높이·팔 길이)을 분절 길이로 변환 */
+function migrateLegacy(raw: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...raw };
+  const H = typeof raw.heightCm === "number" ? raw.heightCm : 175;
+  const ah = 0.039 * H;
+  if (out.thighCm === undefined && typeof raw.legCm === "number" && typeof raw.kneeCm === "number") {
+    out.thighCm = round1(raw.legCm - raw.kneeCm);
+    out.shankCm = round1(raw.kneeCm - ah);
+  }
+  if (out.upperArmCm === undefined && typeof raw.armCm === "number") {
+    out.upperArmCm = round1(raw.armCm * (0.186 / 0.44));
+    out.forearmCm = round1(raw.armCm * (0.146 / 0.44));
+    out.handCm = round1(raw.armCm * (0.108 / 0.44));
+  }
+  delete out.legCm;
+  delete out.kneeCm;
+  delete out.armCm;
+  return out;
+}
 
 function round1(x: number) {
   return Math.round(x * 10) / 10;
@@ -92,9 +127,11 @@ export const LIMITS = {
   heightCm: [120, 220],
   weightKg: [25, 200],
   footMm: [180, 340],
-  armCm: [45, 105],
-  legCm: [55, 125],
-  kneeCm: [28, 68],
+  thighCm: [25, 65],
+  shankCm: [25, 65],
+  upperArmCm: [18, 45],
+  forearmCm: [14, 36],
+  handCm: [10, 26],
   torsoCm: [28, 78],
   shoulderCm: [25, 55],
   hipCm: [18, 45],
@@ -120,7 +157,7 @@ const num = (x: unknown, fallback: number) => (typeof x === "number" && Number.i
 export function sanitizeProfile(p: Partial<Profile> | undefined): { profile: Profile; issues: InputIssue[] } {
   const issues: InputIssue[] = [];
   const base = defaultProfile();
-  const bi = { ...base.body, ...(p?.body ?? {}) } as BodyInput;
+  const bi = { ...base.body, ...migrateLegacy((p?.body ?? {}) as Record<string, unknown>) } as BodyInput;
   const sex: Sex = bi.sex === "f" ? "f" : "m";
   const fix = (key: LimitKey, raw: unknown, fallback: number, label: string) => {
     const [lo, hi] = LIMITS[key];
@@ -143,9 +180,11 @@ export function sanitizeProfile(p: Partial<Profile> | undefined): { profile: Pro
     heightCm,
     weightKg: fix("weightKg", bi.weightKg, std.weightKg, "체중"),
     footMm: fix("footMm", bi.footMm, std.footMm, "발 길이"),
-    armCm: fix("armCm", bi.armCm, std.armCm, "팔 길이"),
-    legCm: fix("legCm", bi.legCm, std.legCm, "다리 길이"),
-    kneeCm: fix("kneeCm", bi.kneeCm, std.kneeCm, "무릎 높이"),
+    thighCm: fix("thighCm", bi.thighCm, std.thighCm, "넙다리 길이"),
+    shankCm: fix("shankCm", bi.shankCm, std.shankCm, "정강이 길이"),
+    upperArmCm: fix("upperArmCm", bi.upperArmCm, std.upperArmCm, "위팔 길이"),
+    forearmCm: fix("forearmCm", bi.forearmCm, std.forearmCm, "아래팔 길이"),
+    handCm: fix("handCm", bi.handCm, std.handCm, "손 길이"),
     torsoCm: fix("torsoCm", bi.torsoCm, std.torsoCm, "몸통 길이"),
     shoulderCm: fix("shoulderCm", bi.shoulderCm, std.shoulderCm, "어깨너비"),
     hipCm: fix("hipCm", bi.hipCm, std.hipCm, "골반너비"),
@@ -166,10 +205,12 @@ export function sanitizeProfile(p: Partial<Profile> | undefined): { profile: Pro
     }
     return v;
   };
-  body.legCm = ratio(body.legCm, 0.44, 0.6, "legCm", "다리 길이", std.legCm);
+  body.thighCm = ratio(body.thighCm, 0.19, 0.3, "thighCm", "넙다리 길이", std.thighCm);
+  body.shankCm = ratio(body.shankCm, 0.19, 0.3, "shankCm", "정강이 길이", std.shankCm);
   body.torsoCm = ratio(body.torsoCm, 0.23, 0.35, "torsoCm", "몸통 길이", std.torsoCm);
-  body.armCm = ratio(body.armCm, 0.37, 0.52, "armCm", "팔 길이", std.armCm);
-  body.kneeCm = ratio(body.kneeCm, 0.23, 0.33, "kneeCm", "무릎 높이", std.kneeCm);
+  body.upperArmCm = ratio(body.upperArmCm, 0.15, 0.23, "upperArmCm", "위팔 길이", std.upperArmCm);
+  body.forearmCm = ratio(body.forearmCm, 0.115, 0.18, "forearmCm", "아래팔 길이", std.forearmCm);
+  body.handCm = ratio(body.handCm, 0.085, 0.13, "handCm", "손 길이", std.handCm);
   body.shoulderCm = ratio(body.shoulderCm, 0.18, 0.29, "shoulderCm", "어깨너비", std.shoulderCm);
   body.hipCm = ratio(body.hipCm, 0.13, 0.22, "hipCm", "골반너비", std.hipCm);
   const fr = body.footMm / 10 / H;
@@ -183,33 +224,24 @@ export function sanitizeProfile(p: Partial<Profile> | undefined): { profile: Pro
     body.footMm = nv;
   }
 
-  // 다리 + 몸통 + 머리·목(최소 0.13H) 이 키를 넘으면 비례 축소
-  const headNeck = H - body.legCm - body.torsoCm;
+  // 다리 + 몸통 + 머리·목(0.12~0.25H) 이 키와 맞지 않으면 비례 조정
+  const legNow = legLengthCm(body);
+  const headNeck = H - legNow - body.torsoCm;
   if (headNeck < 0.12 * H || headNeck > 0.25 * H) {
     const target = headNeck < 0.12 * H ? 0.12 * H : 0.25 * H;
-    const k = (H - target) / (body.legCm + body.torsoCm);
-    const nl = round1(body.legCm * k),
+    const ah = ankleHeightCm(body);
+    const k = (H - target - ah) / (body.thighCm + body.shankCm + body.torsoCm);
+    const nth = round1(body.thighCm * k),
+      nsh = round1(body.shankCm * k),
       nt = round1(body.torsoCm * k);
     issues.push({
       field: "torsoCm",
       severity: "warn",
-      message: `다리(${body.legCm}) + 몸통(${body.torsoCm})이 키 ${H}cm와 맞지 않아 머리·목 길이가 ${Math.round(headNeck)}cm가 됩니다. 다리 ${nl}cm, 몸통 ${nt}cm로 비례 조정했습니다.`,
+      message: `넙다리(${body.thighCm}) + 정강이(${body.shankCm}) + 몸통(${body.torsoCm})이 키 ${H}cm와 맞지 않아 머리·목 길이가 ${Math.round(headNeck)}cm가 됩니다. 넙다리 ${nth}cm, 정강이 ${nsh}cm, 몸통 ${nt}cm로 비례 조정했습니다.`,
     });
-    body.legCm = nl;
+    body.thighCm = nth;
+    body.shankCm = nsh;
     body.torsoCm = nt;
-  }
-  // 무릎 높이는 다리 길이 안쪽이어야 한다 (넙다리 최소 0.17H, 정강이 최소 0.17H)
-  const ankleH = 0.039 * H;
-  const kneeMax = body.legCm - 0.17 * H;
-  const kneeMin = ankleH + 0.17 * H;
-  if (body.kneeCm > kneeMax || body.kneeCm < kneeMin) {
-    const nv = round1(clamp(body.kneeCm, kneeMin, kneeMax));
-    issues.push({
-      field: "kneeCm",
-      severity: "warn",
-      message: `무릎 높이 ${body.kneeCm}cm는 다리 길이 ${body.legCm}cm와 맞지 않아 ${nv}cm로 맞췄습니다.`,
-    });
-    body.kneeCm = nv;
   }
   const bmi = body.weightKg / (H / 100) ** 2;
   if (bmi < 15 || bmi > 40) {
@@ -286,10 +318,9 @@ export function buildBody(profile: Profile): Body {
   const M = b.weightKg;
   const footLen = b.footMm / 1000;
   const ankleH = 0.039 * H;
-  const leg = b.legCm / 100;
-  const knee = b.kneeCm / 100;
-  const thighBase = leg - knee;
-  const shankBase = knee - ankleH;
+  const thighBase = b.thighCm / 100;
+  const shankBase = b.shankCm / 100;
+  const leg = thighBase + shankBase + ankleH;
   const chain = thighBase + shankBase;
   const diff = b.legDiffCm / 100;
   // 다리 길이 차이는 넙다리·정강이에 비례 배분
@@ -302,9 +333,7 @@ export function buildBody(profile: Profile): Body {
   const headNeck = H - leg - torso;
   const skull = Math.min(0.13 * H, headNeck * 0.72);
   const neck = Math.max(0.02 * H, headNeck + shoulderOff[0] - skull);
-  const arm = b.armCm / 100;
-  const armStd = 0.44;
-  const s = arm / (armStd * H);
+  const arm = (b.upperArmCm + b.forearmCm + b.handCm) / 100;
   return {
     H,
     M,
@@ -323,9 +352,9 @@ export function buildBody(profile: Profile): Body {
     shoulderOff,
     neck,
     skull,
-    upperArm: 0.186 * H * s,
-    forearm: 0.146 * H * s,
-    hand: 0.108 * H * s,
+    upperArm: b.upperArmCm / 100,
+    forearm: b.forearmCm / 100,
+    hand: b.handCm / 100,
     armLen: arm,
     mass: {
       head: 0.081 * M,

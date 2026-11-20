@@ -6,6 +6,7 @@ import { bodyCom, measureAngles, type Pose } from "./pose";
 import type { Contact, ContactLoad, Ctx, Metric, Movement, MoveFrame, SimFrame } from "./types";
 import { MOVEMENTS } from "./moves";
 import { analyze, type Finding } from "./analysis";
+import { injuryRisk, type RegionRisk } from "./injury";
 
 export interface SimOptions {
   loadKg?: number;
@@ -23,6 +24,8 @@ export interface SimResult {
   duration: number;
   metrics: Metric[];
   findings: Finding[];
+  /** 부위별 부상 위험도 */
+  injury: RegionRisk[];
   ref?: { frames: SimFrame[]; metrics: Metric[] };
   /** 계산 경고 (수치 문제 등) */
   solverWarnings: string[];
@@ -559,5 +562,6 @@ export function simulate(input: Partial<Profile> | undefined, moveId: string, op
     ref = { frames: r.frames, metrics: rm };
   }
   const findings = analyze(m, profile, ctx, frames, ref?.frames, issues);
-  return { movement: m, profile, issues, loadKg, frames, duration, metrics, findings, ref, solverWarnings: warnings };
+  const injury = injuryRisk(m, profile, ctx, frames, findings.some((f) => f.id === "overload"));
+  return { movement: m, profile, issues, loadKg, frames, duration, metrics, findings, injury, ref, solverWarnings: warnings };
 }

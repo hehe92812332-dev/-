@@ -1,6 +1,6 @@
 "use client";
 
-import { defaultCapacity, defaultMobility, LIMITS, standardBody, type Profile } from "@/lib/biomech/anthropometry";
+import { armLengthCm, defaultCapacity, defaultMobility, legLengthCm, LIMITS, standardBody, type Profile } from "@/lib/biomech/anthropometry";
 import { Field, Label, Seg, fmt } from "./parts";
 import { rescaleBody } from "./state";
 
@@ -10,10 +10,10 @@ const BODY_PRESETS: { id: string; label: string; apply: (p: Profile) => Profile 
   { id: "std", label: "표준 비율", apply: (p) => ({ ...p, body: { ...standardBody(p.body.heightCm, p.body.sex, p.body.weightKg), legDiffCm: 0 } }) },
   {
     id: "femur",
-    label: "긴 넙다리",
+    label: "긴 넙다리·짧은 정강이",
     apply: (p) => {
       const s = standardBody(p.body.heightCm, p.body.sex, p.body.weightKg);
-      return { ...p, body: { ...p.body, ...s, kneeCm: r1(s.kneeCm * 0.9), legDiffCm: p.body.legDiffCm } };
+      return { ...p, body: { ...p.body, ...s, thighCm: r1(s.thighCm * 1.08), shankCm: r1(s.shankCm * 0.93), legDiffCm: p.body.legDiffCm } };
     },
   },
   {
@@ -21,7 +21,7 @@ const BODY_PRESETS: { id: string; label: string; apply: (p: Profile) => Profile 
     label: "긴 팔",
     apply: (p) => {
       const s = standardBody(p.body.heightCm, p.body.sex, p.body.weightKg);
-      return { ...p, body: { ...p.body, ...s, armCm: r1(s.armCm * 1.07), legDiffCm: p.body.legDiffCm } };
+      return { ...p, body: { ...p.body, ...s, upperArmCm: r1(s.upperArmCm * 1.07), forearmCm: r1(s.forearmCm * 1.07), legDiffCm: p.body.legDiffCm } };
     },
   },
   {
@@ -29,7 +29,7 @@ const BODY_PRESETS: { id: string; label: string; apply: (p: Profile) => Profile 
     label: "긴 몸통·짧은 다리",
     apply: (p) => {
       const s = standardBody(p.body.heightCm, p.body.sex, p.body.weightKg);
-      return { ...p, body: { ...p.body, ...s, torsoCm: r1(s.torsoCm * 1.07), legCm: r1(s.legCm * 0.96), kneeCm: r1(s.kneeCm * 0.96), legDiffCm: p.body.legDiffCm } };
+      return { ...p, body: { ...p.body, ...s, torsoCm: r1(s.torsoCm * 1.07), thighCm: r1(s.thighCm * 0.95), shankCm: r1(s.shankCm * 0.95), legDiffCm: p.body.legDiffCm } };
     },
   },
   {
@@ -37,7 +37,7 @@ const BODY_PRESETS: { id: string; label: string; apply: (p: Profile) => Profile 
     label: "짧은 몸통·긴 다리",
     apply: (p) => {
       const s = standardBody(p.body.heightCm, p.body.sex, p.body.weightKg);
-      return { ...p, body: { ...p.body, ...s, torsoCm: r1(s.torsoCm * 0.93), legCm: r1(s.legCm * 1.04), kneeCm: r1(s.kneeCm * 1.04), legDiffCm: p.body.legDiffCm } };
+      return { ...p, body: { ...p.body, ...s, torsoCm: r1(s.torsoCm * 0.93), thighCm: r1(s.thighCm * 1.045), shankCm: r1(s.shankCm * 1.045), legDiffCm: p.body.legDiffCm } };
     },
   },
 ];
@@ -61,13 +61,15 @@ export function Inputs({ profile, patch }: { profile: Profile; patch: Patch }) {
   const setM = (k: keyof Profile["mobility"], v: number) => patch((p) => ({ ...p, mobility: { ...p.mobility, [k]: v } }));
   const setC = (k: keyof Profile["capacity"], v: number) => patch((p) => ({ ...p, capacity: { ...p.capacity, [k]: v } }));
   const L = LIMITS;
-  const thigh = b.legCm - b.kneeCm;
-  const shank = b.kneeCm - 0.039 * b.heightCm;
+  const leg = legLengthCm(b),
+    legStd = legLengthCm(std);
   const ratios = [
-    { label: "넙다리 : 정강이", v: thigh / shank, s: (std.legCm - std.kneeCm) / (std.kneeCm - 0.039 * std.heightCm), d: 2 },
-    { label: "넙다리 / 몸통", v: thigh / b.torsoCm, s: (std.legCm - std.kneeCm) / std.torsoCm, d: 2 },
-    { label: "팔 / 키", v: b.armCm / b.heightCm, s: std.armCm / std.heightCm, d: 3 },
-    { label: "다리 / 키", v: b.legCm / b.heightCm, s: std.legCm / std.heightCm, d: 3 },
+    { label: "넙다리 : 정강이", v: b.thighCm / b.shankCm, s: std.thighCm / std.shankCm, d: 2 },
+    { label: "넙다리 / 몸통", v: b.thighCm / b.torsoCm, s: std.thighCm / std.torsoCm, d: 2 },
+    { label: "위팔 : 아래팔", v: b.upperArmCm / b.forearmCm, s: std.upperArmCm / std.forearmCm, d: 2 },
+    { label: "팔 전체 / 키", v: armLengthCm(b) / b.heightCm, s: armLengthCm(std) / std.heightCm, d: 3 },
+    { label: "다리 / 키", v: leg / b.heightCm, s: legStd / std.heightCm, d: 3 },
+    { label: "몸통 / 키", v: b.torsoCm / b.heightCm, s: std.torsoCm / std.heightCm, d: 3 },
   ];
   return (
     <div className="space-y-6">
@@ -91,9 +93,13 @@ export function Inputs({ profile, patch }: { profile: Profile; patch: Patch }) {
             </button>
           ))}
         </div>
-        <Field label="팔 길이" value={b.armCm} min={L.armCm[0]} max={L.armCm[1]} step={0.5} digits={1} unit="cm" std={std.armCm} onChange={(v) => setB("armCm", v)} hint="어깨 끝 뼈(견봉) → 가운뎃손가락 끝" />
-        <Field label="다리 길이" value={b.legCm} min={L.legCm[0]} max={L.legCm[1]} step={0.5} digits={1} unit="cm" std={std.legCm} onChange={(v) => setB("legCm", v)} hint="바닥 → 골반 옆 튀어나온 뼈(대전자)" />
-        <Field label="무릎 높이" value={b.kneeCm} min={L.kneeCm[0]} max={L.kneeCm[1]} step={0.5} digits={1} unit="cm" std={std.kneeCm} onChange={(v) => setB("kneeCm", v)} hint="바닥 → 무릎 관절 틈. 다리 길이와의 차이가 넙다리 길이입니다." />
+        <div className="mt-3 text-[11px] font-semibold text-[#9a958c]">다리 — 합계 {fmt(leg, 1)}cm (바닥 ~ 대전자)</div>
+        <Field label="넙다리 (대퇴)" value={b.thighCm} min={L.thighCm[0]} max={L.thighCm[1]} step={0.5} digits={1} unit="cm" std={std.thighCm} onChange={(v) => setB("thighCm", v)} hint="골반 옆 튀어나온 뼈(대전자) → 무릎 관절 틈. 앉아서 재면 편합니다." />
+        <Field label="정강이 (하퇴)" value={b.shankCm} min={L.shankCm[0]} max={L.shankCm[1]} step={0.5} digits={1} unit="cm" std={std.shankCm} onChange={(v) => setB("shankCm", v)} hint="무릎 관절 틈 → 안쪽 복사뼈 가운데" />
+        <div className="mt-3 text-[11px] font-semibold text-[#9a958c]">팔 — 합계 {fmt(armLengthCm(b), 1)}cm (어깨 끝 ~ 가운뎃손가락 끝)</div>
+        <Field label="위팔 (상완)" value={b.upperArmCm} min={L.upperArmCm[0]} max={L.upperArmCm[1]} step={0.5} digits={1} unit="cm" std={std.upperArmCm} onChange={(v) => setB("upperArmCm", v)} hint="어깨 끝 뼈(견봉) → 팔꿈치 바깥 뼈" />
+        <Field label="아래팔 (전완)" value={b.forearmCm} min={L.forearmCm[0]} max={L.forearmCm[1]} step={0.5} digits={1} unit="cm" std={std.forearmCm} onChange={(v) => setB("forearmCm", v)} hint="팔꿈치 바깥 뼈 → 손목 바깥 뼈(경상돌기)" />
+        <Field label="손" value={b.handCm} min={L.handCm[0]} max={L.handCm[1]} step={0.5} digits={1} unit="cm" std={std.handCm} onChange={(v) => setB("handCm", v)} hint="손목 주름 → 가운뎃손가락 끝" />
         <Field label="몸통 길이" value={b.torsoCm} min={L.torsoCm[0]} max={L.torsoCm[1]} step={0.5} digits={1} unit="cm" std={std.torsoCm} onChange={(v) => setB("torsoCm", v)} hint="대전자 → 어깨 끝 높이 차이" />
         <Field label="어깨너비" value={b.shoulderCm} min={L.shoulderCm[0]} max={L.shoulderCm[1]} step={0.5} digits={1} unit="cm" std={std.shoulderCm} onChange={(v) => setB("shoulderCm", v)} />
         <Field label="골반너비" value={b.hipCm} min={L.hipCm[0]} max={L.hipCm[1]} step={0.5} digits={1} unit="cm" std={std.hipCm} onChange={(v) => setB("hipCm", v)} />

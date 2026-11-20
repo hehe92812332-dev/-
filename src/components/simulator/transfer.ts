@@ -1,6 +1,7 @@
 // 워커 ↔ 화면 간 전달용 경량 결과 (함수·PoseSpec 제거)
 import type { InputIssue, Profile } from "@/lib/biomech/anthropometry";
 import type { Finding } from "@/lib/biomech/analysis";
+import type { RegionRisk } from "@/lib/biomech/injury";
 import type { Mat3, Vec3 } from "@/lib/biomech/math";
 import type { Angles, Joints } from "@/lib/biomech/pose";
 import type { SimResult } from "@/lib/biomech/simulate";
@@ -42,6 +43,7 @@ export interface LiteResult {
   ref?: LiteFrame[];
   metrics: Metric[];
   findings: Finding[];
+  injury: RegionRisk[];
   bodyMass: number;
   ms: number;
   warnings: string[];
@@ -77,6 +79,7 @@ export function pack(r: SimResult, ms: number): LiteResult {
     ref: r.ref?.frames.map(lite),
     metrics: r.metrics,
     findings: r.findings,
+    injury: r.injury,
     bodyMass: r.profile.body.weightKg,
     ms,
     warnings: r.solverWarnings,

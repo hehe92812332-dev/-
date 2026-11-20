@@ -1,441 +1,526 @@
 {
   "users": 1000000,
-  "seconds": 1064.06,
+  "seconds": 1122.948,
   "stats": {
     "실행": 1000000,
-    "민감도 검사": 19509,
-    "불만:정상 입력이 자동 수정됨": 1296,
-    "불만:잘못된 입력을 못 잡음": 163,
-    "민감도:변화 없음이 정상": 84,
-    "불만:체형을 바꿔도 결과가 그대로": 67,
-    "불만:평범한 체형인데 위험 경고": 41,
-    "불만:체형을 바꾸니 결과가 반대로 움직임": 21,
-    "불만:비현실적 기록": 5
+    "부상위험:높음 부위가 있는 실행": 63084,
+    "민감도 검사": 19475,
+    "불만:정상 입력이 자동 수정됨": 555,
+    "민감도:변화 없음이 정상": 69,
+    "불만:잘못된 입력을 못 잡음": 169,
+    "불만:평범한 체형인데 부상 위험 '높음'": 18,
+    "불만:비현실적 기록": 3,
+    "불만:체형을 바꾸니 결과가 반대로 움직임": 24,
+    "불만:체형을 바꿔도 결과가 그대로": 36,
+    "불만:평범한 체형인데 위험 경고": 15
   },
   "byMove": {
-    "shuttle-run-10m": {
-      "실행": 31125,
-      "불만:정상 입력이 자동 수정됨": 41,
-      "불만:잘못된 입력을 못 잡음": 4
-    },
-    "bench-press": {
-      "실행": 30051,
-      "불만:정상 입력이 자동 수정됨": 47,
-      "불만:잘못된 입력을 못 잡음": 9
-    },
-    "calf-raise": {
-      "실행": 29956,
-      "불만:정상 입력이 자동 수정됨": 32,
-      "불만:잘못된 입력을 못 잡음": 3
-    },
-    "good-morning": {
-      "실행": 29745,
-      "불만:정상 입력이 자동 수정됨": 26,
-      "불만:잘못된 입력을 못 잡음": 7
-    },
-    "back-strength": {
-      "실행": 30761,
-      "불만:정상 입력이 자동 수정됨": 43,
-      "불만:잘못된 입력을 못 잡음": 4,
+    "medicine-ball-throw": {
+      "실행": 31022,
+      "불만:정상 입력이 자동 수정됨": 14,
+      "불만:잘못된 입력을 못 잡음": 2,
       "불만:비현실적 기록": 1
     },
-    "high-bar-squat": {
-      "실행": 29773,
-      "불만:정상 입력이 자동 수정됨": 40,
-      "불만:체형을 바꾸니 결과가 반대로 움직임": 21,
-      "불만:평범한 체형인데 위험 경고": 2,
+    "good-morning": {
+      "실행": 29897,
+      "불만:평범한 체형인데 부상 위험 '높음'": 3,
+      "불만:정상 입력이 자동 수정됨": 19,
+      "불만:잘못된 입력을 못 잡음": 5
+    },
+    "romanian-deadlift": {
+      "실행": 29550,
+      "불만:정상 입력이 자동 수정됨": 20,
+      "불만:잘못된 입력을 못 잡음": 3,
+      "불만:평범한 체형인데 부상 위험 '높음'": 1
+    },
+    "shuttle-run-10m": {
+      "실행": 31023,
+      "불만:정상 입력이 자동 수정됨": 18,
+      "불만:잘못된 입력을 못 잡음": 7
+    },
+    "hip-thrust": {
+      "실행": 29688,
+      "불만:잘못된 입력을 못 잡음": 9,
+      "불만:정상 입력이 자동 수정됨": 16
+    },
+    "sprint-max": {
+      "실행": 20833,
+      "불만:정상 입력이 자동 수정됨": 12,
       "불만:잘못된 입력을 못 잡음": 2
     },
-    "medicine-ball-throw": {
-      "실행": 30855,
-      "불만:정상 입력이 자동 수정됨": 42,
-      "불만:잘못된 입력을 못 잡음": 8
+    "pull-up": {
+      "실행": 29862,
+      "불만:체형을 바꿔도 결과가 그대로": 19,
+      "불만:정상 입력이 자동 수정됨": 11,
+      "불만:잘못된 입력을 못 잡음": 3
     },
-    "skater-jump": {
-      "실행": 20589,
-      "불만:정상 입력이 자동 수정됨": 27,
+    "side-step": {
+      "실행": 30720,
+      "불만:잘못된 입력을 못 잡음": 4,
+      "불만:정상 입력이 자동 수정됨": 17
+    },
+    "deadlift": {
+      "실행": 29603,
+      "불만:정상 입력이 자동 수정됨": 15,
+      "불만:잘못된 입력을 못 잡음": 4,
+      "불만:평범한 체형인데 부상 위험 '높음'": 1
+    },
+    "air-squat": {
+      "실행": 29840,
+      "불만:정상 입력이 자동 수정됨": 18,
       "불만:잘못된 입력을 못 잡음": 2
+    },
+    "barbell-row": {
+      "실행": 29859,
+      "불만:정상 입력이 자동 수정됨": 13,
+      "불만:잘못된 입력을 못 잡음": 6
+    },
+    "push-up": {
+      "실행": 30061,
+      "불만:정상 입력이 자동 수정됨": 15,
+      "불만:잘못된 입력을 못 잡음": 6
+    },
+    "calf-raise": {
+      "실행": 29662,
+      "불만:정상 입력이 자동 수정됨": 15,
+      "불만:잘못된 입력을 못 잡음": 3
     },
     "rotational-throw": {
-      "실행": 20534,
-      "불만:정상 입력이 자동 수정됨": 26,
+      "실행": 20429,
+      "불만:비현실적 기록": 1,
+      "불만:정상 입력이 자동 수정됨": 7,
+      "불만:잘못된 입력을 못 잡음": 4
+    },
+    "standing-long-jump": {
+      "실행": 30998,
+      "불만:잘못된 입력을 못 잡음": 7,
+      "불만:정상 입력이 자동 수정됨": 15,
+      "불만:평범한 체형인데 부상 위험 '높음'": 5
+    },
+    "overhead-press": {
+      "실행": 29791,
+      "불만:정상 입력이 자동 수정됨": 18,
+      "불만:잘못된 입력을 못 잡음": 6
+    },
+    "cmj": {
+      "실행": 20632,
+      "불만:정상 입력이 자동 수정됨": 12,
+      "불만:잘못된 입력을 못 잡음": 2
+    },
+    "sit-up": {
+      "실행": 31002,
+      "불만:정상 입력이 자동 수정됨": 25,
+      "불만:잘못된 입력을 못 잡음": 2
+    },
+    "drop-landing": {
+      "실행": 20847,
+      "불만:정상 입력이 자동 수정됨": 14,
       "불만:잘못된 입력을 못 잡음": 6
     },
     "low-bar-squat": {
-      "실행": 29935,
-      "불만:정상 입력이 자동 수정됨": 37,
-      "불만:잘못된 입력을 못 잡음": 6,
+      "실행": 29862,
+      "불만:정상 입력이 자동 수정됨": 22,
+      "불만:잘못된 입력을 못 잡음": 7,
       "불만:평범한 체형인데 위험 경고": 1
     },
-    "pull-up": {
-      "실행": 29879,
-      "불만:잘못된 입력을 못 잡음": 7,
-      "불만:정상 입력이 자동 수정됨": 36,
-      "불만:체형을 바꿔도 결과가 그대로": 21
-    },
-    "romanian-deadlift": {
-      "실행": 29762,
-      "불만:정상 입력이 자동 수정됨": 33,
-      "불만:잘못된 입력을 못 잡음": 5
-    },
-    "side-cut": {
-      "실행": 20654,
-      "불만:정상 입력이 자동 수정됨": 24,
-      "불만:잘못된 입력을 못 잡음": 1
-    },
-    "side-step": {
-      "실행": 30918,
-      "불만:정상 입력이 자동 수정됨": 35,
-      "불만:잘못된 입력을 못 잡음": 5
-    },
-    "sprint-max": {
-      "실행": 20835,
-      "불만:정상 입력이 자동 수정됨": 22,
-      "불만:비현실적 기록": 3,
-      "불만:잘못된 입력을 못 잡음": 2
-    },
-    "sit-and-reach": {
-      "실행": 30691,
-      "불만:정상 입력이 자동 수정됨": 34,
-      "불만:잘못된 입력을 못 잡음": 6,
-      "불만:체형을 바꿔도 결과가 그대로": 2
-    },
-    "sargent-jump": {
-      "실행": 31216,
-      "불만:정상 입력이 자동 수정됨": 38,
-      "불만:체형을 바꿔도 결과가 그대로": 19,
-      "불만:잘못된 입력을 못 잡음": 3
-    },
-    "push-up": {
-      "실행": 29431,
-      "불만:정상 입력이 자동 수정됨": 43,
-      "불만:잘못된 입력을 못 잡음": 6
-    },
-    "hip-thrust": {
-      "실행": 29776,
-      "불만:정상 입력이 자동 수정됨": 40,
-      "불만:잘못된 입력을 못 잡음": 3
-    },
-    "sit-up": {
-      "실행": 30979,
-      "불만:정상 입력이 자동 수정됨": 45,
-      "불만:잘못된 입력을 못 잡음": 6
-    },
-    "barbell-row": {
-      "실행": 29706,
-      "불만:정상 입력이 자동 수정됨": 46,
-      "불만:잘못된 입력을 못 잡음": 2
-    },
-    "overhead-press": {
-      "실행": 29772,
-      "불만:정상 입력이 자동 수정됨": 49,
-      "불만:잘못된 입력을 못 잡음": 9
-    },
-    "goblet-squat": {
-      "실행": 30034,
-      "불만:정상 입력이 자동 수정됨": 49,
-      "불만:평범한 체형인데 위험 경고": 22,
-      "불만:잘못된 입력을 못 잡음": 2
-    },
-    "standing-long-jump": {
-      "실행": 31020,
-      "불만:정상 입력이 자동 수정됨": 45,
-      "불만:잘못된 입력을 못 잡음": 3,
+    "back-strength": {
+      "실행": 31151,
+      "불만:정상 입력이 자동 수정됨": 15,
+      "불만:잘못된 입력을 못 잡음": 4,
       "불만:비현실적 기록": 1
     },
     "bulgarian-split-squat": {
-      "실행": 30031,
-      "불만:정상 입력이 자동 수정됨": 20,
-      "불만:평범한 체형인데 위험 경고": 2,
-      "불만:잘못된 입력을 못 잡음": 6
-    },
-    "deadlift": {
-      "실행": 29862,
-      "불만:정상 입력이 자동 수정됨": 45,
-      "불만:잘못된 입력을 못 잡음": 4
-    },
-    "front-squat": {
-      "실행": 29262,
-      "불만:체형을 바꿔도 결과가 그대로": 25,
-      "불만:정상 입력이 자동 수정됨": 41,
-      "불만:잘못된 입력을 못 잡음": 2
-    },
-    "overhead-squat": {
-      "실행": 30007,
-      "불만:정상 입력이 자동 수정됨": 49,
-      "불만:평범한 체형인데 위험 경고": 14,
-      "불만:잘못된 입력을 못 잡음": 2
-    },
-    "sumo-deadlift": {
-      "실행": 29802,
-      "불만:정상 입력이 자동 수정됨": 37,
-      "불만:잘못된 입력을 못 잡음": 5
-    },
-    "cmj": {
-      "실행": 20723,
-      "불만:정상 입력이 자동 수정됨": 29,
-      "불만:잘못된 입력을 못 잡음": 1
-    },
-    "air-squat": {
-      "실행": 29793,
-      "불만:정상 입력이 자동 수정됨": 37,
-      "불만:잘못된 입력을 못 잡음": 8
-    },
-    "kettlebell-swing": {
-      "실행": 20744,
-      "불만:정상 입력이 자동 수정됨": 23,
-      "불만:잘못된 입력을 못 잡음": 5
-    },
-    "reverse-lunge": {
-      "실행": 29733,
-      "불만:정상 입력이 자동 수정됨": 45,
+      "실행": 29952,
+      "불만:정상 입력이 자동 수정됨": 16,
       "불만:잘못된 입력을 못 잡음": 7
     },
+    "skater-jump": {
+      "실행": 20544,
+      "불만:정상 입력이 자동 수정됨": 14,
+      "불만:잘못된 입력을 못 잡음": 5,
+      "불만:평범한 체형인데 부상 위험 '높음'": 1
+    },
     "box-jump": {
-      "실행": 20810,
-      "불만:정상 입력이 자동 수정됨": 32,
+      "실행": 20714,
+      "불만:정상 입력이 자동 수정됨": 12,
       "불만:잘못된 입력을 못 잡음": 4
+    },
+    "sit-and-reach": {
+      "실행": 30946,
+      "불만:정상 입력이 자동 수정됨": 15,
+      "불만:잘못된 입력을 못 잡음": 7,
+      "불만:체형을 바꿔도 결과가 그대로": 1
+    },
+    "reverse-lunge": {
+      "실행": 29642,
+      "불만:정상 입력이 자동 수정됨": 17,
+      "불만:잘못된 입력을 못 잡음": 4
+    },
+    "overhead-squat": {
+      "실행": 29682,
+      "불만:정상 입력이 자동 수정됨": 19,
+      "불만:평범한 체형인데 부상 위험 '높음'": 2,
+      "불만:잘못된 입력을 못 잡음": 4,
+      "불만:평범한 체형인데 위험 경고": 6
+    },
+    "sumo-deadlift": {
+      "실행": 29947,
+      "불만:평범한 체형인데 부상 위험 '높음'": 2,
+      "불만:정상 입력이 자동 수정됨": 18,
+      "불만:잘못된 입력을 못 잡음": 6
+    },
+    "goblet-squat": {
+      "실행": 30040,
+      "불만:정상 입력이 자동 수정됨": 18,
+      "불만:잘못된 입력을 못 잡음": 5,
+      "불만:평범한 체형인데 위험 경고": 8
+    },
+    "sargent-jump": {
+      "실행": 30790,
+      "불만:잘못된 입력을 못 잡음": 4,
+      "불만:체형을 바꿔도 결과가 그대로": 15,
+      "불만:정상 입력이 자동 수정됨": 8
+    },
+    "front-squat": {
+      "실행": 29938,
+      "불만:정상 입력이 자동 수정됨": 15,
+      "불만:잘못된 입력을 못 잡음": 3,
+      "불만:체형을 바꿔도 결과가 그대로": 1
+    },
+    "high-bar-squat": {
+      "실행": 29704,
+      "불만:정상 입력이 자동 수정됨": 23,
+      "불만:체형을 바꾸니 결과가 반대로 움직임": 24,
+      "불만:잘못된 입력을 못 잡음": 6,
+      "불만:평범한 체형인데 부상 위험 '높음'": 3
+    },
+    "bench-press": {
+      "실행": 29723,
+      "불만:정상 입력이 자동 수정됨": 25,
+      "불만:잘못된 입력을 못 잡음": 8
+    },
+    "side-cut": {
+      "실행": 20612,
+      "불만:정상 입력이 자동 수정됨": 9,
+      "불만:잘못된 입력을 못 잡음": 2
+    },
+    "kettlebell-swing": {
+      "실행": 20796,
+      "불만:정상 입력이 자동 수정됨": 8,
+      "불만:잘못된 입력을 못 잡음": 6
     },
     "sprint-accel": {
-      "실행": 20612,
-      "불만:정상 입력이 자동 수정됨": 16,
-      "불만:잘못된 입력을 못 잡음": 4
-    },
-    "drop-landing": {
-      "실행": 20624,
-      "불만:정상 입력이 자동 수정됨": 22,
-      "불만:잘못된 입력을 못 잡음": 4
+      "실행": 20638,
+      "불만:잘못된 입력을 못 잡음": 4,
+      "불만:정상 입력이 자동 수정됨": 7
     }
   },
   "examples": {
     "불만:정상 입력이 자동 수정됨": [
       {
-        "persona": "gym",
+        "persona": "exam",
         "body": {
-          "sex": "f",
-          "heightCm": 144.5,
-          "weightKg": 41.5,
-          "footMm": 215,
-          "armCm": 63.5,
-          "legCm": 82.5,
-          "kneeCm": 39,
-          "torsoCm": 45,
-          "shoulderCm": 34,
+          "sex": "m",
+          "heightCm": 172,
+          "weightKg": 67.5,
+          "footMm": 285,
+          "thighCm": 44.5,
+          "shankCm": 45.5,
+          "upperArmCm": 32.5,
+          "forearmCm": 26,
+          "handCm": 18.5,
+          "torsoCm": 56,
+          "shoulderCm": 40.5,
           "hipCm": 25.5,
-          "legDiffCm": -0.7
+          "legDiffCm": -0.5
         },
         "mobility": {
-          "ankleDF": 38,
-          "hipFlex": 118,
-          "hamstring": 88,
-          "shoulderFlex": 169,
-          "thoracicRot": 50
+          "ankleDF": 28,
+          "hipFlex": 127,
+          "hamstring": 96,
+          "shoulderFlex": 174,
+          "thoracicRot": 40
         },
         "capacity": {
-          "power": 42,
-          "control": 62,
+          "power": 84,
+          "control": 65,
           "asym": 5
         },
         "loadKg": 0,
         "mistake": "",
         "issues": [
-          "다리(82.5) + 몸통(45)이 키 144.5cm와 맞지 않아 머리·목 길이가 17cm가 됩니다. 다리 82.3cm, 몸통 44.9cm로 비례 조정했습니다."
+          "넙다리(44.5) + 정강이(45.5) + 몸통(56)이 키 172cm와 맞지 않아 머리·목 길이가 19cm가 됩니다. 넙다리 44.1cm, 정강이 45.1cm, 몸통 55.5cm로 비례 조정했습니다."
         ]
       },
       {
-        "persona": "gym",
+        "persona": "athlete",
         "body": {
           "sex": "m",
-          "heightCm": 179.5,
-          "weightKg": 77,
-          "footMm": 260,
-          "armCm": 75.5,
-          "legCm": 85,
-          "kneeCm": 48.5,
-          "torsoCm": 49,
-          "shoulderCm": 44.5,
-          "hipCm": 28,
+          "heightCm": 175.5,
+          "weightKg": 71,
+          "footMm": 270,
+          "thighCm": 39,
+          "shankCm": 37,
+          "upperArmCm": 32.5,
+          "forearmCm": 27.5,
+          "handCm": 19,
+          "torsoCm": 48.5,
+          "shoulderCm": 37,
+          "hipCm": 31,
           "legDiffCm": 0
         },
         "mobility": {
-          "ankleDF": 28,
-          "hipFlex": 121,
-          "hamstring": 80,
-          "shoulderFlex": 157,
-          "thoracicRot": 57
+          "ankleDF": 47,
+          "hipFlex": 130,
+          "hamstring": 78,
+          "shoulderFlex": 166,
+          "thoracicRot": 46
         },
         "capacity": {
-          "power": 81,
-          "control": 62,
-          "asym": 1
+          "power": 64,
+          "control": 55,
+          "asym": -10
         },
-        "loadKg": 92.5,
+        "loadKg": 21.578381791710854,
         "mistake": "",
         "issues": [
-          "다리(85) + 몸통(49)이 키 179.5cm와 맞지 않아 머리·목 길이가 46cm가 됩니다. 다리 85.4cm, 몸통 49.2cm로 비례 조정했습니다."
+          "넙다리(39) + 정강이(37) + 몸통(48.5)이 키 175.5cm와 맞지 않아 머리·목 길이가 44cm가 됩니다. 넙다리 39.1cm, 정강이 37.1cm, 몸통 48.6cm로 비례 조정했습니다."
         ]
       },
       {
-        "persona": "gym",
+        "persona": "athlete",
         "body": {
           "sex": "m",
           "heightCm": 178,
-          "weightKg": 79,
+          "weightKg": 81,
           "footMm": 265,
-          "armCm": 76.5,
-          "legCm": 103.5,
-          "kneeCm": 49,
-          "torsoCm": 54,
-          "shoulderCm": 37.5,
-          "hipCm": 29,
-          "legDiffCm": 0
+          "thighCm": 43,
+          "shankCm": 44.5,
+          "upperArmCm": 32.5,
+          "forearmCm": 25,
+          "handCm": 20,
+          "torsoCm": 48.5,
+          "shoulderCm": 42.5,
+          "hipCm": 22.5,
+          "legDiffCm": -0.4
         },
         "mobility": {
           "ankleDF": 39,
-          "hipFlex": 139,
-          "hamstring": 92,
-          "shoulderFlex": 172,
-          "thoracicRot": 45
+          "hipFlex": 127,
+          "hamstring": 73,
+          "shoulderFlex": 175,
+          "thoracicRot": 51
         },
         "capacity": {
-          "power": 43,
+          "power": 63,
           "control": 72,
-          "asym": -3
+          "asym": -1
         },
-        "loadKg": 25.941975908353925,
+        "loadKg": 30,
         "mistake": "",
         "issues": [
-          "다리(103.5) + 몸통(54)이 키 178cm와 맞지 않아 머리·목 길이가 21cm가 됩니다. 다리 102.9cm, 몸통 53.7cm로 비례 조정했습니다."
+          "골반너비 22.5cm는 키 178cm에 비해 짧아 측정 오류로 보고 23.1cm로 맞췄습니다. (표준 29.4cm)"
         ]
       },
       {
-        "persona": "exam",
+        "persona": "athlete",
         "body": {
           "sex": "m",
-          "heightCm": 171.5,
-          "weightKg": 68,
-          "footMm": 260,
-          "armCm": 71.5,
-          "legCm": 103,
-          "kneeCm": 48,
-          "torsoCm": 49,
-          "shoulderCm": 38,
+          "heightCm": 178.5,
+          "weightKg": 77,
+          "footMm": 285,
+          "thighCm": 48.5,
+          "shankCm": 48,
+          "upperArmCm": 34,
+          "forearmCm": 26.5,
+          "handCm": 19.5,
+          "torsoCm": 54,
+          "shoulderCm": 41,
           "hipCm": 30,
           "legDiffCm": 0
         },
         "mobility": {
-          "ankleDF": 38,
-          "hipFlex": 122,
-          "hamstring": 91,
-          "shoulderFlex": 179,
-          "thoracicRot": 43
+          "ankleDF": 41,
+          "hipFlex": 134,
+          "hamstring": 75,
+          "shoulderFlex": 176,
+          "thoracicRot": 41
         },
         "capacity": {
-          "power": 60,
-          "control": 55,
-          "asym": 5
+          "power": 65,
+          "control": 65,
+          "asym": 0
         },
         "loadKg": 0,
         "mistake": "",
         "issues": [
-          "다리 길이 103cm는 키 171.5cm에 비해 길어 측정 오류로 보고 102.9cm로 맞췄습니다. (표준 90.9cm)",
-          "다리(102.9) + 몸통(49)이 키 171.5cm와 맞지 않아 머리·목 길이가 20cm가 됩니다. 다리 102.2cm, 몸통 48.7cm로 비례 조정했습니다."
-        ]
-      },
-      {
-        "persona": "exam",
-        "body": {
-          "sex": "m",
-          "heightCm": 170.5,
-          "weightKg": 73,
-          "footMm": 255,
-          "armCm": 77,
-          "legCm": 99.5,
-          "kneeCm": 49.5,
-          "torsoCm": 53.5,
-          "shoulderCm": 38.5,
-          "hipCm": 27,
-          "legDiffCm": 0
-        },
-        "mobility": {
-          "ankleDF": 43,
-          "hipFlex": 126,
-          "hamstring": 98,
-          "shoulderFlex": 184,
-          "thoracicRot": 46
-        },
-        "capacity": {
-          "power": 69,
-          "control": 48,
-          "asym": -4
-        },
-        "loadKg": 2.7702730260789394,
-        "mistake": "",
-        "issues": [
-          "다리(99.5) + 몸통(53.5)이 키 170.5cm와 맞지 않아 머리·목 길이가 18cm가 됩니다. 다리 97.6cm, 몸통 52.5cm로 비례 조정했습니다."
+          "넙다리(48.5) + 정강이(48) + 몸통(54)이 키 178.5cm와 맞지 않아 머리·목 길이가 21cm가 됩니다. 넙다리 48.4cm, 정강이 47.9cm, 몸통 53.9cm로 비례 조정했습니다."
         ]
       },
       {
         "persona": "gym",
         "body": {
           "sex": "m",
-          "heightCm": 171,
-          "weightKg": 76.5,
-          "footMm": 260,
-          "armCm": 77,
-          "legCm": 96.5,
-          "kneeCm": 48,
-          "torsoCm": 54,
-          "shoulderCm": 40.5,
-          "hipCm": 29.5,
+          "heightCm": 170,
+          "weightKg": 73.5,
+          "footMm": 250,
+          "thighCm": 47.5,
+          "shankCm": 44.5,
+          "upperArmCm": 31.5,
+          "forearmCm": 25,
+          "handCm": 17,
+          "torsoCm": 52,
+          "shoulderCm": 38,
+          "hipCm": 28,
           "legDiffCm": 0
         },
         "mobility": {
-          "ankleDF": 41,
-          "hipFlex": 131,
-          "hamstring": 96,
-          "shoulderFlex": 161,
-          "thoracicRot": 35
+          "ankleDF": 44,
+          "hipFlex": 133,
+          "hamstring": 95,
+          "shoulderFlex": 157,
+          "thoracicRot": 42
         },
         "capacity": {
-          "power": 18,
-          "control": 37,
-          "asym": 6
+          "power": 53,
+          "control": 66,
+          "asym": 4
+        },
+        "loadKg": 20,
+        "mistake": "",
+        "issues": [
+          "넙다리(47.5) + 정강이(44.5) + 몸통(52)이 키 170cm와 맞지 않아 머리·목 길이가 19cm가 됩니다. 넙다리 47.2cm, 정강이 44.2cm, 몸통 51.6cm로 비례 조정했습니다."
+        ]
+      },
+      {
+        "persona": "athlete",
+        "body": {
+          "sex": "m",
+          "heightCm": 165.5,
+          "weightKg": 65,
+          "footMm": 240,
+          "thighCm": 43,
+          "shankCm": 43.5,
+          "upperArmCm": 29,
+          "forearmCm": 25.5,
+          "handCm": 18,
+          "torsoCm": 53,
+          "shoulderCm": 36.5,
+          "hipCm": 27.5,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 54,
+          "hipFlex": 147,
+          "hamstring": 91,
+          "shoulderFlex": 173,
+          "thoracicRot": 38
+        },
+        "capacity": {
+          "power": 100,
+          "control": 69,
+          "asym": 2
         },
         "loadKg": 0,
         "mistake": "",
         "issues": [
-          "다리(96.5) + 몸통(54)이 키 171cm와 맞지 않아 머리·목 길이가 21cm가 됩니다. 다리 96.5cm, 몸통 54cm로 비례 조정했습니다."
+          "넙다리(43) + 정강이(43.5) + 몸통(53)이 키 165.5cm와 맞지 않아 머리·목 길이가 20cm가 됩니다. 넙다리 42.9cm, 정강이 43.4cm, 몸통 52.9cm로 비례 조정했습니다."
         ]
       }
     ],
     "불만:잘못된 입력을 못 잡음": [
       {
-        "persona": "gym",
+        "persona": "exam",
         "body": {
           "sex": "f",
-          "heightCm": 164.5,
-          "weightKg": 107,
-          "footMm": 220,
-          "armCm": 74,
-          "legCm": 89,
-          "kneeCm": 44,
-          "torsoCm": 49.5,
-          "shoulderCm": 37,
-          "hipCm": 30.5,
+          "heightCm": 159,
+          "weightKg": 95,
+          "footMm": 250,
+          "thighCm": 36,
+          "shankCm": 40.5,
+          "upperArmCm": 30,
+          "forearmCm": 24,
+          "handCm": 17,
+          "torsoCm": 43.5,
+          "shoulderCm": 35,
+          "hipCm": 29.5,
           "legDiffCm": 0
         },
         "mobility": {
-          "ankleDF": 31,
-          "hipFlex": 109,
-          "hamstring": 78,
-          "shoulderFlex": 169,
-          "thoracicRot": 48
+          "ankleDF": 45,
+          "hipFlex": 125,
+          "hamstring": 89,
+          "shoulderFlex": 164,
+          "thoracicRot": 37
         },
         "capacity": {
-          "power": 26,
-          "control": 60,
-          "asym": -3
+          "power": 61,
+          "control": 71,
+          "asym": 4
+        },
+        "loadKg": 0,
+        "mistake": "lbs"
+      },
+      {
+        "persona": "rehab",
+        "body": {
+          "sex": "f",
+          "heightCm": 155.5,
+          "weightKg": 96,
+          "footMm": 260,
+          "thighCm": 37.5,
+          "shankCm": 37.5,
+          "upperArmCm": 27,
+          "forearmCm": 22.5,
+          "handCm": 17.5,
+          "torsoCm": 45,
+          "shoulderCm": 34,
+          "hipCm": 26,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 38,
+          "hipFlex": 99,
+          "hamstring": 48,
+          "shoulderFlex": 158,
+          "thoracicRot": 41
+        },
+        "capacity": {
+          "power": 27,
+          "control": 38,
+          "asym": -10
+        },
+        "loadKg": 105,
+        "mistake": "lbs"
+      },
+      {
+        "persona": "exam",
+        "body": {
+          "sex": "f",
+          "heightCm": 165.5,
+          "weightKg": 109,
+          "footMm": 260,
+          "thighCm": 42,
+          "shankCm": 41.5,
+          "upperArmCm": 29,
+          "forearmCm": 22,
+          "handCm": 16.5,
+          "torsoCm": 49.5,
+          "shoulderCm": 38.5,
+          "hipCm": 29.5,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 45,
+          "hipFlex": 117,
+          "hamstring": 87,
+          "shoulderFlex": 168,
+          "thoracicRot": 59
+        },
+        "capacity": {
+          "power": 55,
+          "control": 58,
+          "asym": 3
         },
         "loadKg": 0,
         "mistake": "lbs"
@@ -443,29 +528,63 @@
       {
         "persona": "exam",
         "body": {
-          "sex": "f",
-          "heightCm": 158.5,
-          "weightKg": 83,
-          "footMm": 245,
-          "armCm": 72,
-          "legCm": 84,
-          "kneeCm": 45,
-          "torsoCm": 46,
-          "shoulderCm": 38.5,
-          "hipCm": 27.5,
+          "sex": "m",
+          "heightCm": 184.5,
+          "weightKg": 130,
+          "footMm": 290,
+          "thighCm": 45,
+          "shankCm": 45.5,
+          "upperArmCm": 31.5,
+          "forearmCm": 27.5,
+          "handCm": 19.5,
+          "torsoCm": 49,
+          "shoulderCm": 39.5,
+          "hipCm": 31,
           "legDiffCm": 0
         },
         "mobility": {
-          "ankleDF": 42,
-          "hipFlex": 119,
-          "hamstring": 78,
-          "shoulderFlex": 162,
-          "thoracicRot": 34
+          "ankleDF": 39,
+          "hipFlex": 127,
+          "hamstring": 66,
+          "shoulderFlex": 173,
+          "thoracicRot": 56
         },
         "capacity": {
-          "power": 86,
-          "control": 79,
-          "asym": 9
+          "power": 68,
+          "control": 86,
+          "asym": 1
+        },
+        "loadKg": 0,
+        "mistake": "lbs"
+      },
+      {
+        "persona": "athlete",
+        "body": {
+          "sex": "m",
+          "heightCm": 180.5,
+          "weightKg": 127,
+          "footMm": 270,
+          "thighCm": 41.5,
+          "shankCm": 45,
+          "upperArmCm": 34,
+          "forearmCm": 28,
+          "handCm": 21,
+          "torsoCm": 49.5,
+          "shoulderCm": 41.5,
+          "hipCm": 31.5,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 46,
+          "hipFlex": 136,
+          "hamstring": 87,
+          "shoulderFlex": 176,
+          "thoracicRot": 51
+        },
+        "capacity": {
+          "power": 94,
+          "control": 74,
+          "asym": -3
         },
         "loadKg": 0,
         "mistake": "lbs"
@@ -474,439 +593,887 @@
         "persona": "gym",
         "body": {
           "sex": "f",
-          "heightCm": 157,
-          "weightKg": 96,
-          "footMm": 240,
-          "armCm": 67,
-          "legCm": 84.5,
-          "kneeCm": 42.5,
-          "torsoCm": 46,
-          "shoulderCm": 36.5,
+          "heightCm": 157.5,
+          "weightKg": 86,
+          "footMm": 245,
+          "thighCm": 37.5,
+          "shankCm": 37.5,
+          "upperArmCm": 29.5,
+          "forearmCm": 22.5,
+          "handCm": 17,
+          "torsoCm": 45.5,
+          "shoulderCm": 37,
+          "hipCm": 26,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 39,
+          "hipFlex": 123,
+          "hamstring": 76,
+          "shoulderFlex": 162,
+          "thoracicRot": 39
+        },
+        "capacity": {
+          "power": 75,
+          "control": 82,
+          "asym": 0
+        },
+        "loadKg": 20,
+        "mistake": "lbs"
+      }
+    ],
+    "불만:평범한 체형인데 부상 위험 '높음'": [
+      {
+        "persona": "gym",
+        "body": {
+          "sex": "m",
+          "heightCm": 182,
+          "weightKg": 74,
+          "footMm": 260,
+          "thighCm": 44,
+          "shankCm": 44.5,
+          "upperArmCm": 33.5,
+          "forearmCm": 26.5,
+          "handCm": 20.5,
+          "torsoCm": 52.5,
+          "shoulderCm": 44.5,
           "hipCm": 30,
           "legDiffCm": 0
         },
         "mobility": {
-          "ankleDF": 50,
-          "hipFlex": 127,
-          "hamstring": 80,
-          "shoulderFlex": 173,
-          "thoracicRot": 55
+          "ankleDF": 53,
+          "hipFlex": 119,
+          "hamstring": 70,
+          "shoulderFlex": 185,
+          "thoracicRot": 50
         },
         "capacity": {
-          "power": 19,
-          "control": 44,
+          "power": 41,
+          "control": 57,
           "asym": 5
         },
-        "loadKg": 0,
-        "mistake": "lbs"
+        "loadKg": 60,
+        "mistake": "",
+        "inj": [
+          "hamstring:64 햄스트링이 유연성 한계(하지직거상 70°) 근처까지 늘어남"
+        ]
+      },
+      {
+        "persona": "gym",
+        "body": {
+          "sex": "m",
+          "heightCm": 169,
+          "weightKg": 59,
+          "footMm": 275,
+          "thighCm": 42,
+          "shankCm": 41,
+          "upperArmCm": 31,
+          "forearmCm": 25,
+          "handCm": 19,
+          "torsoCm": 49,
+          "shoulderCm": 37,
+          "hipCm": 28,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 40,
+          "hipFlex": 121,
+          "hamstring": 89,
+          "shoulderFlex": 165,
+          "thoracicRot": 38
+        },
+        "capacity": {
+          "power": 53,
+          "control": 73,
+          "asym": -6
+        },
+        "loadKg": 42.5,
+        "mistake": "",
+        "inj": [
+          "shoulder:60 어깨 굴곡 18° 부족/어깨를 가동범위 끝까지 올림/어깨 모멘트 체중×팔길이의 11%"
+        ]
+      },
+      {
+        "persona": "athlete",
+        "body": {
+          "sex": "f",
+          "heightCm": 156,
+          "weightKg": 53,
+          "footMm": 240,
+          "thighCm": 38,
+          "shankCm": 39,
+          "upperArmCm": 29,
+          "forearmCm": 22.5,
+          "handCm": 18,
+          "torsoCm": 45.5,
+          "shoulderCm": 30.5,
+          "hipCm": 27,
+          "legDiffCm": 1.5
+        },
+        "mobility": {
+          "ankleDF": 45,
+          "hipFlex": 126,
+          "hamstring": 87,
+          "shoulderFlex": 180,
+          "thoracicRot": 48
+        },
+        "capacity": {
+          "power": 93,
+          "control": 61,
+          "asym": -5
+        },
+        "loadKg": 100,
+        "mistake": "",
+        "inj": [
+          "hip:78 고관절 굴곡 가동범위 끝(126°)에서 반복 → 앞쪽 끼임/골반 좌우 기울기 5.3°/다리 길이 차이 1.5cm/고관절 신전 모멘트 체중×키의 20%"
+        ]
       },
       {
         "persona": "gym",
         "body": {
           "sex": "m",
           "heightCm": 177.5,
-          "weightKg": 118,
-          "footMm": 255,
-          "armCm": 80,
-          "legCm": 97,
-          "kneeCm": 51.5,
-          "torsoCm": 53,
-          "shoulderCm": 42.5,
+          "weightKg": 83.5,
+          "footMm": 265,
+          "thighCm": 43,
+          "shankCm": 44,
+          "upperArmCm": 33.5,
+          "forearmCm": 25.5,
+          "handCm": 21,
+          "torsoCm": 51,
+          "shoulderCm": 43,
           "hipCm": 28.5,
           "legDiffCm": 0
         },
         "mobility": {
-          "ankleDF": 32,
-          "hipFlex": 126,
-          "hamstring": 76,
-          "shoulderFlex": 180,
-          "thoracicRot": 46
-        },
-        "capacity": {
-          "power": 48,
-          "control": 35,
-          "asym": -2
-        },
-        "loadKg": 122.5,
-        "mistake": "lbs"
-      },
-      {
-        "persona": "exam",
-        "body": {
-          "sex": "f",
-          "heightCm": 165.5,
-          "weightKg": 103,
-          "footMm": 250,
-          "armCm": 71,
-          "legCm": 92,
-          "kneeCm": 47,
-          "torsoCm": 49,
-          "shoulderCm": 35.5,
-          "hipCm": 29.5,
-          "legDiffCm": 0
-        },
-        "mobility": {
-          "ankleDF": 46,
-          "hipFlex": 132,
-          "hamstring": 89,
-          "shoulderFlex": 180,
-          "thoracicRot": 41
-        },
-        "capacity": {
-          "power": 71,
-          "control": 63,
-          "asym": 2
-        },
-        "loadKg": 0,
-        "mistake": "lbs"
-      },
-      {
-        "persona": "exam",
-        "body": {
-          "sex": "m",
-          "heightCm": 178.5,
-          "weightKg": 121,
-          "footMm": 270,
-          "armCm": 80.5,
-          "legCm": 93.5,
-          "kneeCm": 52,
-          "torsoCm": 49,
-          "shoulderCm": 43.5,
-          "hipCm": 29.5,
-          "legDiffCm": 0
-        },
-        "mobility": {
-          "ankleDF": 37,
-          "hipFlex": 121,
-          "hamstring": 59,
-          "shoulderFlex": 178,
-          "thoracicRot": 48
-        },
-        "capacity": {
-          "power": 64,
-          "control": 67,
-          "asym": -3
-        },
-        "loadKg": 18.919190984219313,
-        "mistake": "lbs"
-      }
-    ],
-    "불만:체형을 바꿔도 결과가 그대로": [
-      {
-        "mid": "front-squat",
-        "metric": "compNoDF",
-        "a": 17.115601416200885,
-        "c": 17.115601416200885,
-        "body": {
-          "sex": "f",
-          "heightCm": 159,
-          "weightKg": 61,
-          "footMm": 245,
-          "armCm": 69,
-          "legCm": 83,
-          "kneeCm": 47,
-          "torsoCm": 51.5,
-          "shoulderCm": 37.5,
-          "hipCm": 26.5,
-          "legDiffCm": 0
-        },
-        "mobility": {
-          "ankleDF": 47,
-          "hipFlex": 125,
-          "hamstring": 76,
-          "shoulderFlex": 179,
-          "thoracicRot": 46
-        },
-        "capacity": {
-          "power": 27,
-          "control": 45,
-          "asym": 8
-        }
-      },
-      {
-        "mid": "front-squat",
-        "metric": "compNoDF",
-        "a": 16.976615064338848,
-        "c": 16.976615064338848,
-        "body": {
-          "sex": "f",
-          "heightCm": 160.5,
-          "weightKg": 53.5,
-          "footMm": 235,
-          "armCm": 67.5,
-          "legCm": 78,
-          "kneeCm": 46,
-          "torsoCm": 45,
-          "shoulderCm": 35,
-          "hipCm": 29,
-          "legDiffCm": -0.7
-        },
-        "mobility": {
-          "ankleDF": 46,
-          "hipFlex": 133,
-          "hamstring": 85,
-          "shoulderFlex": 167,
-          "thoracicRot": 53
-        },
-        "capacity": {
-          "power": 60,
-          "control": 55,
-          "asym": -1
-        }
-      },
-      {
-        "mid": "pull-up",
-        "metric": "reps",
-        "a": 4,
-        "c": 4,
-        "body": {
-          "sex": "f",
-          "heightCm": 156,
-          "weightKg": 65,
-          "footMm": 225,
-          "armCm": 68.5,
-          "legCm": 84,
-          "kneeCm": 44,
-          "torsoCm": 40.5,
-          "shoulderCm": 31,
-          "hipCm": 28.5,
-          "legDiffCm": 0
-        },
-        "mobility": {
-          "ankleDF": 35,
-          "hipFlex": 115,
-          "hamstring": 59,
-          "shoulderFlex": 160,
-          "thoracicRot": 26
-        },
-        "capacity": {
-          "power": 28,
-          "control": 46,
-          "asym": -10
-        }
-      },
-      {
-        "mid": "pull-up",
-        "metric": "reps",
-        "a": 4,
-        "c": 4,
-        "body": {
-          "sex": "m",
-          "heightCm": 178.5,
-          "weightKg": 79,
-          "footMm": 260,
-          "armCm": 77,
-          "legCm": 86,
-          "kneeCm": 52.5,
-          "torsoCm": 52.5,
-          "shoulderCm": 43.5,
-          "hipCm": 29,
-          "legDiffCm": 1.1
-        },
-        "mobility": {
-          "ankleDF": 34,
-          "hipFlex": 129,
-          "hamstring": 56,
+          "ankleDF": 41,
+          "hipFlex": 127,
+          "hamstring": 75,
           "shoulderFlex": 174,
           "thoracicRot": 45
         },
         "capacity": {
-          "power": 17,
-          "control": 71,
-          "asym": 0
-        }
+          "power": 77,
+          "control": 66,
+          "asym": -6
+        },
+        "loadKg": 85,
+        "mistake": "",
+        "inj": [
+          "hamstring:62 햄스트링이 유연성 한계(하지직거상 75°) 근처까지 늘어남"
+        ]
       },
       {
-        "mid": "pull-up",
-        "metric": "reps",
-        "a": 4,
-        "c": 4,
+        "persona": "athlete",
+        "body": {
+          "sex": "m",
+          "heightCm": 186,
+          "weightKg": 80.5,
+          "footMm": 280,
+          "thighCm": 46.5,
+          "shankCm": 46.5,
+          "upperArmCm": 35,
+          "forearmCm": 27,
+          "handCm": 19,
+          "torsoCm": 53,
+          "shoulderCm": 43,
+          "hipCm": 32,
+          "legDiffCm": 0.8
+        },
+        "mobility": {
+          "ankleDF": 39,
+          "hipFlex": 120,
+          "hamstring": 84,
+          "shoulderFlex": 178,
+          "thoracicRot": 40
+        },
+        "capacity": {
+          "power": 96,
+          "control": 88,
+          "asym": -1
+        },
+        "loadKg": 160,
+        "mistake": "",
+        "inj": [
+          "hip:60 고관절 굴곡 가동범위 끝(120°)에서 반복 → 앞쪽 끼임/골반 좌우 기울기 2.4°/다리 길이 차이 0.8cm/고관절 신전 모멘트 체중×키의 14%"
+        ]
+      },
+      {
+        "persona": "exam",
+        "body": {
+          "sex": "m",
+          "heightCm": 168,
+          "weightKg": 62.5,
+          "footMm": 245,
+          "thighCm": 42,
+          "shankCm": 40.5,
+          "upperArmCm": 31,
+          "forearmCm": 24.5,
+          "handCm": 18,
+          "torsoCm": 47.5,
+          "shoulderCm": 33.5,
+          "hipCm": 25.5,
+          "legDiffCm": 1
+        },
+        "mobility": {
+          "ankleDF": 36,
+          "hipFlex": 123,
+          "hamstring": 70,
+          "shoulderFlex": 167,
+          "thoracicRot": 45
+        },
+        "capacity": {
+          "power": 83,
+          "control": 53,
+          "asym": 6
+        },
+        "loadKg": 0,
+        "mistake": "",
+        "inj": [
+          "knee:76 무릎 신전 모멘트 체중×키의 80%/순간 지면반력 체중의 4.4배/최대 충격 때 무릎 굴곡 43° (뻣뻣한 착지)"
+        ]
+      }
+    ],
+    "불만:비현실적 기록": [
+      {
+        "persona": "rehab",
         "body": {
           "sex": "f",
-          "heightCm": 165.5,
-          "weightKg": 72.5,
-          "footMm": 235,
-          "armCm": 75,
-          "legCm": 88.5,
-          "kneeCm": 46.5,
-          "torsoCm": 49.5,
+          "heightCm": 139.5,
+          "weightKg": 46,
+          "footMm": 215,
+          "thighCm": 32.5,
+          "shankCm": 36,
+          "upperArmCm": 25.5,
+          "forearmCm": 20,
+          "handCm": 16.5,
+          "torsoCm": 39,
+          "shoulderCm": 29.5,
+          "hipCm": 27,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 44,
+          "hipFlex": 91,
+          "hamstring": 80,
+          "shoulderFlex": 158,
+          "thoracicRot": 31
+        },
+        "capacity": {
+          "power": 6,
+          "control": 32,
+          "asym": 16
+        },
+        "loadKg": 10,
+        "mistake": "",
+        "metric": "예상 비거리",
+        "value": 1.9949875488136037
+      },
+      {
+        "persona": "exam",
+        "body": {
+          "sex": "m",
+          "heightCm": 173,
+          "weightKg": 97.5,
+          "footMm": 280,
+          "thighCm": 43.5,
+          "shankCm": 47,
+          "upperArmCm": 33,
+          "forearmCm": 25.5,
+          "handCm": 19,
+          "torsoCm": 44.5,
           "shoulderCm": 37.5,
           "hipCm": 31,
           "legDiffCm": 0
         },
         "mobility": {
-          "ankleDF": 36,
-          "hipFlex": 141,
-          "hamstring": 89,
-          "shoulderFlex": 170,
-          "thoracicRot": 43
+          "ankleDF": 53,
+          "hipFlex": 131,
+          "hamstring": 81,
+          "shoulderFlex": 184,
+          "thoracicRot": 48
         },
         "capacity": {
-          "power": 42,
-          "control": 58,
+          "power": 100,
+          "control": 54,
+          "asym": 11
+        },
+        "loadKg": 0,
+        "mistake": "",
+        "metric": "예상 기록",
+        "value": 325.2580945180303
+      },
+      {
+        "persona": "exam",
+        "body": {
+          "sex": "m",
+          "heightCm": 181.5,
+          "weightKg": 95,
+          "footMm": 265,
+          "thighCm": 47,
+          "shankCm": 48,
+          "upperArmCm": 36,
+          "forearmCm": 28,
+          "handCm": 20,
+          "torsoCm": 52,
+          "shoulderCm": 47,
+          "hipCm": 30.5,
+          "legDiffCm": -0.3
+        },
+        "mobility": {
+          "ankleDF": 26,
+          "hipFlex": 135,
+          "hamstring": 89,
+          "shoulderFlex": 186,
+          "thoracicRot": 37
+        },
+        "capacity": {
+          "power": 100,
+          "control": 52,
+          "asym": 4
+        },
+        "loadKg": 2.000064753461629,
+        "mistake": "",
+        "metric": "예상 기록",
+        "value": 19.41708437433386
+      }
+    ],
+    "불만:체형을 바꾸니 결과가 반대로 움직임": [
+      {
+        "mid": "high-bar-squat",
+        "metric": "comp",
+        "a": 140.70317698173687,
+        "c": 139.77536498007933,
+        "body": {
+          "sex": "m",
+          "heightCm": 170.5,
+          "weightKg": 89,
+          "footMm": 240,
+          "thighCm": 42.5,
+          "shankCm": 42.5,
+          "upperArmCm": 32.5,
+          "forearmCm": 24.5,
+          "handCm": 19,
+          "torsoCm": 50,
+          "shoulderCm": 39.5,
+          "hipCm": 28,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 15,
+          "hipFlex": 119,
+          "hamstring": 77,
+          "shoulderFlex": 138,
+          "thoracicRot": 48
+        },
+        "capacity": {
+          "power": 46,
+          "control": 14,
+          "asym": 5
+        }
+      },
+      {
+        "mid": "high-bar-squat",
+        "metric": "comp",
+        "a": 145.37169004143578,
+        "c": 143.48280723864616,
+        "body": {
+          "sex": "m",
+          "heightCm": 166,
+          "weightKg": 70.5,
+          "footMm": 255,
+          "thighCm": 42.5,
+          "shankCm": 39,
+          "upperArmCm": 31,
+          "forearmCm": 26,
+          "handCm": 19,
+          "torsoCm": 48.5,
+          "shoulderCm": 37.5,
+          "hipCm": 25.5,
+          "legDiffCm": -0.1
+        },
+        "mobility": {
+          "ankleDF": 28,
+          "hipFlex": 119,
+          "hamstring": 80,
+          "shoulderFlex": 183,
+          "thoracicRot": 57
+        },
+        "capacity": {
+          "power": 66,
+          "control": 47,
+          "asym": -1
+        }
+      },
+      {
+        "mid": "high-bar-squat",
+        "metric": "comp",
+        "a": 151.8020370047161,
+        "c": 147.20700652926195,
+        "body": {
+          "sex": "m",
+          "heightCm": 168.5,
+          "weightKg": 66.5,
+          "footMm": 250,
+          "thighCm": 41,
+          "shankCm": 41.5,
+          "upperArmCm": 31.5,
+          "forearmCm": 24,
+          "handCm": 18.5,
+          "torsoCm": 43,
+          "shoulderCm": 41,
+          "hipCm": 24,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 29,
+          "hipFlex": 113,
+          "hamstring": 101,
+          "shoulderFlex": 162,
+          "thoracicRot": 49
+        },
+        "capacity": {
+          "power": 14,
+          "control": 54,
+          "asym": 1
+        }
+      },
+      {
+        "mid": "high-bar-squat",
+        "metric": "comp",
+        "a": 155.52484826285144,
+        "c": 154.63400077668274,
+        "body": {
+          "sex": "m",
+          "heightCm": 178,
+          "weightKg": 79.5,
+          "footMm": 275,
+          "thighCm": 44.5,
+          "shankCm": 43,
+          "upperArmCm": 34,
+          "forearmCm": 25,
+          "handCm": 20.5,
+          "torsoCm": 53.5,
+          "shoulderCm": 44.5,
+          "hipCm": 31,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 14,
+          "hipFlex": 97,
+          "hamstring": 83,
+          "shoulderFlex": 177,
+          "thoracicRot": 46
+        },
+        "capacity": {
+          "power": 30,
+          "control": 52,
           "asym": -5
         }
       },
       {
-        "mid": "front-squat",
-        "metric": "compNoDF",
-        "a": 16.998965934545748,
-        "c": 16.998965934545748,
+        "mid": "high-bar-squat",
+        "metric": "comp",
+        "a": 143.19612771516603,
+        "c": 138.7703521307216,
         "body": {
           "sex": "m",
-          "heightCm": 162.5,
-          "weightKg": 56.5,
-          "footMm": 250,
-          "armCm": 77,
-          "legCm": 85,
-          "kneeCm": 49,
-          "torsoCm": 46.5,
-          "shoulderCm": 41,
-          "hipCm": 29.5,
+          "heightCm": 174,
+          "weightKg": 46.5,
+          "footMm": 285,
+          "thighCm": 42,
+          "shankCm": 45,
+          "upperArmCm": 34.5,
+          "forearmCm": 26.5,
+          "handCm": 19.5,
+          "torsoCm": 50.5,
+          "shoulderCm": 39.5,
+          "hipCm": 28.5,
           "legDiffCm": 0
         },
         "mobility": {
-          "ankleDF": 46,
-          "hipFlex": 132,
-          "hamstring": 98,
-          "shoulderFlex": 172,
-          "thoracicRot": 48
+          "ankleDF": 26,
+          "hipFlex": 122,
+          "hamstring": 71,
+          "shoulderFlex": 179,
+          "thoracicRot": 31
         },
         "capacity": {
-          "power": 84,
-          "control": 53,
-          "asym": 9
+          "power": 42,
+          "control": 49,
+          "asym": 7
+        }
+      },
+      {
+        "mid": "high-bar-squat",
+        "metric": "comp",
+        "a": 143.1387057073265,
+        "c": 141.9276272590933,
+        "body": {
+          "sex": "f",
+          "heightCm": 169,
+          "weightKg": 50.5,
+          "footMm": 245,
+          "thighCm": 39.5,
+          "shankCm": 42,
+          "upperArmCm": 32,
+          "forearmCm": 25,
+          "handCm": 18.5,
+          "torsoCm": 48,
+          "shoulderCm": 36.5,
+          "hipCm": 29,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 8,
+          "hipFlex": 112,
+          "hamstring": 68,
+          "shoulderFlex": 179,
+          "thoracicRot": 44
+        },
+        "capacity": {
+          "power": 25,
+          "control": 24,
+          "asym": -16
+        }
+      }
+    ],
+    "불만:체형을 바꿔도 결과가 그대로": [
+      {
+        "mid": "pull-up",
+        "metric": "reps",
+        "a": 4,
+        "c": 4,
+        "body": {
+          "sex": "f",
+          "heightCm": 171,
+          "weightKg": 64,
+          "footMm": 245,
+          "thighCm": 40,
+          "shankCm": 42,
+          "upperArmCm": 33.5,
+          "forearmCm": 25,
+          "handCm": 19,
+          "torsoCm": 50.5,
+          "shoulderCm": 37.5,
+          "hipCm": 30,
+          "legDiffCm": 0.3
+        },
+        "mobility": {
+          "ankleDF": 44,
+          "hipFlex": 116,
+          "hamstring": 89,
+          "shoulderFlex": 179,
+          "thoracicRot": 37
+        },
+        "capacity": {
+          "power": 36,
+          "control": 78,
+          "asym": 3
+        }
+      },
+      {
+        "mid": "pull-up",
+        "metric": "reps",
+        "a": 5,
+        "c": 5,
+        "body": {
+          "sex": "m",
+          "heightCm": 175,
+          "weightKg": 83.5,
+          "footMm": 245,
+          "thighCm": 44,
+          "shankCm": 42,
+          "upperArmCm": 32,
+          "forearmCm": 25.5,
+          "handCm": 18.5,
+          "torsoCm": 52,
+          "shoulderCm": 40.5,
+          "hipCm": 27,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 41,
+          "hipFlex": 119,
+          "hamstring": 80,
+          "shoulderFlex": 163,
+          "thoracicRot": 44
+        },
+        "capacity": {
+          "power": 29,
+          "control": 68,
+          "asym": -2
+        }
+      },
+      {
+        "mid": "sargent-jump",
+        "metric": "sargent",
+        "a": 56.43315172108372,
+        "c": 56.433151721083675,
+        "body": {
+          "sex": "f",
+          "heightCm": 154.5,
+          "weightKg": 37.5,
+          "footMm": 220,
+          "thighCm": 40,
+          "shankCm": 37.5,
+          "upperArmCm": 29,
+          "forearmCm": 22,
+          "handCm": 17.5,
+          "torsoCm": 42.5,
+          "shoulderCm": 33,
+          "hipCm": 25.5,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 45,
+          "hipFlex": 133,
+          "hamstring": 69,
+          "shoulderFlex": 189,
+          "thoracicRot": 53
+        },
+        "capacity": {
+          "power": 68,
+          "control": 38,
+          "asym": -3
+        }
+      },
+      {
+        "mid": "pull-up",
+        "metric": "reps",
+        "a": 4,
+        "c": 4,
+        "body": {
+          "sex": "f",
+          "heightCm": 168,
+          "weightKg": 64,
+          "footMm": 255,
+          "thighCm": 39.5,
+          "shankCm": 43,
+          "upperArmCm": 30.5,
+          "forearmCm": 23.5,
+          "handCm": 18.5,
+          "torsoCm": 49,
+          "shoulderCm": 35.5,
+          "hipCm": 28.5,
+          "legDiffCm": -0.6
+        },
+        "mobility": {
+          "ankleDF": 47,
+          "hipFlex": 129,
+          "hamstring": 77,
+          "shoulderFlex": 173,
+          "thoracicRot": 54
+        },
+        "capacity": {
+          "power": 30,
+          "control": 71,
+          "asym": 1
+        }
+      },
+      {
+        "mid": "pull-up",
+        "metric": "reps",
+        "a": 4,
+        "c": 4,
+        "body": {
+          "sex": "f",
+          "heightCm": 157.5,
+          "weightKg": 67,
+          "footMm": 230,
+          "thighCm": 38.5,
+          "shankCm": 40.5,
+          "upperArmCm": 29,
+          "forearmCm": 22.5,
+          "handCm": 17.5,
+          "torsoCm": 48.5,
+          "shoulderCm": 32.5,
+          "hipCm": 26.5,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 37,
+          "hipFlex": 128,
+          "hamstring": 105,
+          "shoulderFlex": 175,
+          "thoracicRot": 37
+        },
+        "capacity": {
+          "power": 31,
+          "control": 52,
+          "asym": -6
+        }
+      },
+      {
+        "mid": "pull-up",
+        "metric": "reps",
+        "a": 4,
+        "c": 4,
+        "body": {
+          "sex": "m",
+          "heightCm": 180,
+          "weightKg": 87,
+          "footMm": 290,
+          "thighCm": 43.5,
+          "shankCm": 43,
+          "upperArmCm": 34,
+          "forearmCm": 25.5,
+          "handCm": 18.5,
+          "torsoCm": 49.5,
+          "shoulderCm": 41,
+          "hipCm": 30,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 44,
+          "hipFlex": 119,
+          "hamstring": 71,
+          "shoulderFlex": 164,
+          "thoracicRot": 40
+        },
+        "capacity": {
+          "power": 23,
+          "control": 62,
+          "asym": 6
         }
       }
     ],
     "불만:평범한 체형인데 위험 경고": [
       {
-        "persona": "gym",
+        "persona": "exam",
         "body": {
-          "sex": "f",
-          "heightCm": 159,
-          "weightKg": 51.5,
-          "footMm": 245,
-          "armCm": 69.5,
-          "legCm": 83.5,
-          "kneeCm": 46,
-          "torsoCm": 45.5,
-          "shoulderCm": 33,
-          "hipCm": 26,
-          "legDiffCm": 0
-        },
-        "mobility": {
-          "ankleDF": 35,
-          "hipFlex": 134,
-          "hamstring": 77,
-          "shoulderFlex": 167,
-          "thoracicRot": 48
-        },
-        "capacity": {
-          "power": 21,
-          "control": 52,
-          "asym": 10
-        },
-        "loadKg": 22.5,
-        "mistake": "",
-        "risk": [
-          "뒤꿈치가 13° 들립니다"
-        ]
-      },
-      {
-        "persona": "gym",
-        "body": {
-          "sex": "f",
-          "heightCm": 164.5,
-          "weightKg": 69,
-          "footMm": 255,
-          "armCm": 71,
-          "legCm": 86.5,
-          "kneeCm": 46.5,
-          "torsoCm": 48,
-          "shoulderCm": 38.5,
+          "sex": "m",
+          "heightCm": 175.5,
+          "weightKg": 70.5,
+          "footMm": 270,
+          "thighCm": 42.5,
+          "shankCm": 44,
+          "upperArmCm": 33,
+          "forearmCm": 25.5,
+          "handCm": 19.5,
+          "torsoCm": 50.5,
+          "shoulderCm": 41.5,
           "hipCm": 29.5,
-          "legDiffCm": 0.5
-        },
-        "mobility": {
-          "ankleDF": 40,
-          "hipFlex": 143,
-          "hamstring": 72,
-          "shoulderFlex": 166,
-          "thoracicRot": 50
-        },
-        "capacity": {
-          "power": 39,
-          "control": 51,
-          "asym": -1
-        },
-        "loadKg": 25,
-        "mistake": "",
-        "risk": [
-          "뒤꿈치가 13° 들립니다"
-        ]
-      },
-      {
-        "persona": "gym",
-        "body": {
-          "sex": "m",
-          "heightCm": 173.5,
-          "weightKg": 79,
-          "footMm": 280,
-          "armCm": 75,
-          "legCm": 92,
-          "kneeCm": 49.5,
-          "torsoCm": 50,
-          "shoulderCm": 40.5,
-          "hipCm": 29,
-          "legDiffCm": 0
-        },
-        "mobility": {
-          "ankleDF": 33,
-          "hipFlex": 140,
-          "hamstring": 84,
-          "shoulderFlex": 174,
-          "thoracicRot": 44
-        },
-        "capacity": {
-          "power": 32,
-          "control": 52,
-          "asym": -3
-        },
-        "loadKg": 27.5,
-        "mistake": "",
-        "risk": [
-          "뒤꿈치가 13° 들립니다"
-        ]
-      },
-      {
-        "persona": "gym",
-        "body": {
-          "sex": "m",
-          "heightCm": 175,
-          "weightKg": 69,
-          "footMm": 255,
-          "armCm": 76,
-          "legCm": 92.5,
-          "kneeCm": 49,
-          "torsoCm": 51,
-          "shoulderCm": 43.5,
-          "hipCm": 28,
           "legDiffCm": 0
         },
         "mobility": {
           "ankleDF": 32,
-          "hipFlex": 141,
-          "hamstring": 91,
-          "shoulderFlex": 170,
+          "hipFlex": 118,
+          "hamstring": 76,
+          "shoulderFlex": 163,
           "thoracicRot": 51
         },
         "capacity": {
-          "power": 1,
-          "control": 83,
-          "asym": 1
+          "power": 79,
+          "control": 67,
+          "asym": -3
         },
-        "loadKg": 27.5,
+        "loadKg": 4,
+        "mistake": "",
+        "risk": [
+          "뒤꿈치가 11° 들립니다"
+        ]
+      },
+      {
+        "persona": "gym",
+        "body": {
+          "sex": "m",
+          "heightCm": 164,
+          "weightKg": 73,
+          "footMm": 270,
+          "thighCm": 40.5,
+          "shankCm": 39.5,
+          "upperArmCm": 30,
+          "forearmCm": 24,
+          "handCm": 16.5,
+          "torsoCm": 47.5,
+          "shoulderCm": 36.5,
+          "hipCm": 26.5,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 35,
+          "hipFlex": 121,
+          "hamstring": 71,
+          "shoulderFlex": 166,
+          "thoracicRot": 49
+        },
+        "capacity": {
+          "power": 56,
+          "control": 78,
+          "asym": -1
+        },
+        "loadKg": 11.181864604353905,
+        "mistake": "",
+        "risk": [
+          "뒤꿈치가 9° 들립니다"
+        ]
+      },
+      {
+        "persona": "athlete",
+        "body": {
+          "sex": "f",
+          "heightCm": 159.5,
+          "weightKg": 55,
+          "footMm": 235,
+          "thighCm": 39.5,
+          "shankCm": 39,
+          "upperArmCm": 30,
+          "forearmCm": 23.5,
+          "handCm": 18,
+          "torsoCm": 46.5,
+          "shoulderCm": 38.5,
+          "hipCm": 30,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 36,
+          "hipFlex": 129,
+          "hamstring": 79,
+          "shoulderFlex": 168,
+          "thoracicRot": 48
+        },
+        "capacity": {
+          "power": 76,
+          "control": 59,
+          "asym": 9
+        },
+        "loadKg": 25,
+        "mistake": "",
+        "risk": [
+          "뒤꿈치가 12° 들립니다"
+        ]
+      },
+      {
+        "persona": "athlete",
+        "body": {
+          "sex": "m",
+          "heightCm": 172.5,
+          "weightKg": 67,
+          "footMm": 280,
+          "thighCm": 43,
+          "shankCm": 42,
+          "upperArmCm": 32.5,
+          "forearmCm": 25,
+          "handCm": 20,
+          "torsoCm": 49,
+          "shoulderCm": 40,
+          "hipCm": 26,
+          "legDiffCm": 0
+        },
+        "mobility": {
+          "ankleDF": 36,
+          "hipFlex": 126,
+          "hamstring": 82,
+          "shoulderFlex": 163,
+          "thoracicRot": 45
+        },
+        "capacity": {
+          "power": 83,
+          "control": 84,
+          "asym": 0
+        },
+        "loadKg": 4,
         "mistake": "",
         "risk": [
           "뒤꿈치가 8° 들립니다"
@@ -915,445 +1482,99 @@
       {
         "persona": "gym",
         "body": {
-          "sex": "m",
-          "heightCm": 182,
-          "weightKg": 66.5,
-          "footMm": 275,
-          "armCm": 78.5,
-          "legCm": 95,
-          "kneeCm": 51,
-          "torsoCm": 52.5,
-          "shoulderCm": 42,
-          "hipCm": 33,
-          "legDiffCm": 0
-        },
-        "mobility": {
-          "ankleDF": 34,
-          "hipFlex": 122,
-          "hamstring": 88,
-          "shoulderFlex": 164,
-          "thoracicRot": 35
-        },
-        "capacity": {
-          "power": 58,
-          "control": 65,
-          "asym": -1
-        },
-        "loadKg": 11.89553577080369,
-        "mistake": "",
-        "risk": [
-          "뒤꿈치가 11° 들립니다"
-        ]
-      },
-      {
-        "persona": "athlete",
-        "body": {
           "sex": "f",
-          "heightCm": 163.5,
-          "weightKg": 42,
-          "footMm": 255,
-          "armCm": 70.5,
-          "legCm": 87.5,
-          "kneeCm": 46.5,
-          "torsoCm": 48,
-          "shoulderCm": 37.5,
-          "hipCm": 32,
-          "legDiffCm": 0
-        },
-        "mobility": {
-          "ankleDF": 32,
-          "hipFlex": 128,
-          "hamstring": 85,
-          "shoulderFlex": 170,
-          "thoracicRot": 57
-        },
-        "capacity": {
-          "power": 75,
-          "control": 64,
-          "asym": 14
-        },
-        "loadKg": 20.098381862044334,
-        "mistake": "",
-        "risk": [
-          "뒤꿈치가 11° 들립니다"
-        ]
-      }
-    ],
-    "불만:체형을 바꾸니 결과가 반대로 움직임": [
-      {
-        "mid": "high-bar-squat",
-        "metric": "comp",
-        "a": 159.6646699427524,
-        "c": 156.0897723868321,
-        "body": {
-          "sex": "m",
-          "heightCm": 172.5,
-          "weightKg": 65.5,
-          "footMm": 265,
-          "armCm": 77,
-          "legCm": 92,
-          "kneeCm": 46.5,
-          "torsoCm": 50,
-          "shoulderCm": 38.5,
-          "hipCm": 27.5,
-          "legDiffCm": 0
-        },
-        "mobility": {
-          "ankleDF": 30,
-          "hipFlex": 108,
-          "hamstring": 68,
-          "shoulderFlex": 148,
-          "thoracicRot": 40
-        },
-        "capacity": {
-          "power": 36,
-          "control": 39,
-          "asym": 11
-        }
-      },
-      {
-        "mid": "high-bar-squat",
-        "metric": "comp",
-        "a": 152.2609830676287,
-        "c": 151.82285271927577,
-        "body": {
-          "sex": "f",
-          "heightCm": 161,
-          "weightKg": 59,
-          "footMm": 235,
-          "armCm": 69.5,
-          "legCm": 89.5,
-          "kneeCm": 44,
-          "torsoCm": 46.5,
-          "shoulderCm": 34.5,
-          "hipCm": 29.5,
-          "legDiffCm": 0
-        },
-        "mobility": {
-          "ankleDF": 35,
-          "hipFlex": 116,
-          "hamstring": 85,
-          "shoulderFlex": 161,
-          "thoracicRot": 40
-        },
-        "capacity": {
-          "power": 70,
-          "control": 63,
-          "asym": -20
-        }
-      },
-      {
-        "mid": "high-bar-squat",
-        "metric": "comp",
-        "a": 150.95899498609054,
-        "c": 146.40040544546852,
-        "body": {
-          "sex": "m",
-          "heightCm": 154.5,
-          "weightKg": 49.5,
-          "footMm": 220,
-          "armCm": 65.5,
-          "legCm": 81.5,
-          "kneeCm": 45.5,
-          "torsoCm": 44,
-          "shoulderCm": 35,
-          "hipCm": 27,
-          "legDiffCm": 0.4
-        },
-        "mobility": {
-          "ankleDF": 22,
-          "hipFlex": 114,
-          "hamstring": 72,
-          "shoulderFlex": 192,
-          "thoracicRot": 52
-        },
-        "capacity": {
-          "power": 15,
-          "control": 40,
-          "asym": -14
-        }
-      },
-      {
-        "mid": "high-bar-squat",
-        "metric": "comp",
-        "a": 148.90038112103352,
-        "c": 148.00215088344558,
-        "body": {
-          "sex": "f",
-          "heightCm": 169.5,
-          "weightKg": 53,
-          "footMm": 250,
-          "armCm": 77.5,
-          "legCm": 88.5,
-          "kneeCm": 49.5,
-          "torsoCm": 51,
-          "shoulderCm": 38,
-          "hipCm": 32.5,
-          "legDiffCm": 0
-        },
-        "mobility": {
-          "ankleDF": 14,
-          "hipFlex": 106,
-          "hamstring": 66,
-          "shoulderFlex": 144,
-          "thoracicRot": 46
-        },
-        "capacity": {
-          "power": 44,
-          "control": 55,
-          "asym": -28
-        }
-      },
-      {
-        "mid": "high-bar-squat",
-        "metric": "comp",
-        "a": 153.67673358794184,
-        "c": 151.20383202027534,
-        "body": {
-          "sex": "m",
-          "heightCm": 185,
-          "weightKg": 80,
-          "footMm": 270,
-          "armCm": 81,
-          "legCm": 101.5,
-          "kneeCm": 49.5,
-          "torsoCm": 54,
-          "shoulderCm": 41,
-          "hipCm": 30,
+          "heightCm": 160,
+          "weightKg": 64,
+          "footMm": 245,
+          "thighCm": 39.5,
+          "shankCm": 39.5,
+          "upperArmCm": 29.5,
+          "forearmCm": 23,
+          "handCm": 18,
+          "torsoCm": 45.5,
+          "shoulderCm": 31,
+          "hipCm": 29,
           "legDiffCm": 0
         },
         "mobility": {
           "ankleDF": 36,
-          "hipFlex": 114,
-          "hamstring": 81,
-          "shoulderFlex": 165,
-          "thoracicRot": 46
+          "hipFlex": 126,
+          "hamstring": 79,
+          "shoulderFlex": 175,
+          "thoracicRot": 43
         },
         "capacity": {
-          "power": 89,
-          "control": 62,
-          "asym": 3
-        }
+          "power": 37,
+          "control": 72,
+          "asym": 6
+        },
+        "loadKg": 20,
+        "mistake": "",
+        "risk": [
+          "뒤꿈치가 10° 들립니다"
+        ]
       },
-      {
-        "mid": "high-bar-squat",
-        "metric": "comp",
-        "a": 147.0192436900085,
-        "c": 146.8652951113069,
-        "body": {
-          "sex": "m",
-          "heightCm": 175.5,
-          "weightKg": 80.5,
-          "footMm": 280,
-          "armCm": 78.5,
-          "legCm": 93.5,
-          "kneeCm": 47.5,
-          "torsoCm": 50,
-          "shoulderCm": 43,
-          "hipCm": 26,
-          "legDiffCm": 0
-        },
-        "mobility": {
-          "ankleDF": 35,
-          "hipFlex": 122,
-          "hamstring": 73,
-          "shoulderFlex": 179,
-          "thoracicRot": 56
-        },
-        "capacity": {
-          "power": 66,
-          "control": 47,
-          "asym": 0
-        }
-      }
-    ],
-    "불만:비현실적 기록": [
       {
         "persona": "gym",
         "body": {
-          "sex": "f",
-          "heightCm": 150.5,
-          "weightKg": 47,
-          "footMm": 220,
-          "armCm": 63,
-          "legCm": 75,
-          "kneeCm": 43,
-          "torsoCm": 48,
-          "shoulderCm": 34,
-          "hipCm": 27.5,
-          "legDiffCm": 0.5
-        },
-        "mobility": {
-          "ankleDF": 39,
-          "hipFlex": 129,
-          "hamstring": 58,
-          "shoulderFlex": 189,
-          "thoracicRot": 49
-        },
-        "capacity": {
-          "power": 0,
-          "control": 26,
-          "asym": -5
-        },
-        "loadKg": 0,
-        "mistake": "",
-        "metric": "예상 기록",
-        "value": 24.152851563203093
-      },
-      {
-        "persona": "athlete",
-        "body": {
           "sex": "m",
-          "heightCm": 180.5,
-          "weightKg": 62.5,
-          "footMm": 265,
-          "armCm": 78.5,
-          "legCm": 105,
-          "kneeCm": 51.5,
-          "torsoCm": 47.5,
-          "shoulderCm": 43,
-          "hipCm": 30,
-          "legDiffCm": 0
-        },
-        "mobility": {
-          "ankleDF": 46,
-          "hipFlex": 125,
-          "hamstring": 72,
-          "shoulderFlex": 161,
-          "thoracicRot": 40
-        },
-        "capacity": {
-          "power": 100,
-          "control": 86,
-          "asym": -6
-        },
-        "loadKg": 0,
-        "mistake": "",
-        "metric": "최고 속도",
-        "value": 12.14214129387791
-      },
-      {
-        "persona": "exam",
-        "body": {
-          "sex": "m",
-          "heightCm": 190,
-          "weightKg": 68,
-          "footMm": 305,
-          "armCm": 85,
-          "legCm": 105.5,
-          "kneeCm": 53.5,
-          "torsoCm": 52,
-          "shoulderCm": 44,
-          "hipCm": 31.5,
+          "heightCm": 162.5,
+          "weightKg": 67,
+          "footMm": 245,
+          "thighCm": 40.5,
+          "shankCm": 40.5,
+          "upperArmCm": 30,
+          "forearmCm": 23.5,
+          "handCm": 16,
+          "torsoCm": 46.5,
+          "shoulderCm": 35,
+          "hipCm": 24.5,
           "legDiffCm": 0
         },
         "mobility": {
           "ankleDF": 36,
-          "hipFlex": 124,
-          "hamstring": 68,
-          "shoulderFlex": 177,
-          "thoracicRot": 50
+          "hipFlex": 125,
+          "hamstring": 98,
+          "shoulderFlex": 172,
+          "thoracicRot": 37
         },
         "capacity": {
-          "power": 96,
-          "control": 63,
-          "asym": 8
+          "power": 22,
+          "control": 80,
+          "asym": 0
         },
-        "loadKg": 0,
+        "loadKg": 22.5,
         "mistake": "",
-        "metric": "예상 기록",
-        "value": 369.06309888622377
-      },
-      {
-        "persona": "athlete",
-        "body": {
-          "sex": "m",
-          "heightCm": 185.5,
-          "weightKg": 65.5,
-          "footMm": 290,
-          "armCm": 85.5,
-          "legCm": 100,
-          "kneeCm": 53,
-          "torsoCm": 53,
-          "shoulderCm": 43,
-          "hipCm": 31.5,
-          "legDiffCm": 0.2
-        },
-        "mobility": {
-          "ankleDF": 49,
-          "hipFlex": 137,
-          "hamstring": 96,
-          "shoulderFlex": 162,
-          "thoracicRot": 53
-        },
-        "capacity": {
-          "power": 98,
-          "control": 78,
-          "asym": -5
-        },
-        "loadKg": 0,
-        "mistake": "",
-        "metric": "최고 속도",
-        "value": 11.891327574319176
-      },
-      {
-        "persona": "athlete",
-        "body": {
-          "sex": "m",
-          "heightCm": 179,
-          "weightKg": 58.5,
-          "footMm": 285,
-          "armCm": 75.5,
-          "legCm": 101.5,
-          "kneeCm": 52.5,
-          "torsoCm": 48.5,
-          "shoulderCm": 45.5,
-          "hipCm": 31,
-          "legDiffCm": 0
-        },
-        "mobility": {
-          "ankleDF": 40,
-          "hipFlex": 128,
-          "hamstring": 79,
-          "shoulderFlex": 179,
-          "thoracicRot": 45
-        },
-        "capacity": {
-          "power": 99,
-          "control": 70,
-          "asym": 5
-        },
-        "loadKg": 0,
-        "mistake": "",
-        "metric": "최고 속도",
-        "value": 11.828307879036664
+        "risk": [
+          "뒤꿈치가 9° 들립니다"
+        ]
       }
     ]
   },
   "metricSummary": {
-    "shuttle-run-10m:time": {
-      "n": 16000,
-      "p5": 9.958018124550762,
-      "p50": 10.772437945178137,
-      "p95": 12.000026477856462
-    },
-    "back-strength:kg": {
-      "n": 16000,
-      "p5": 69.66757278294325,
-      "p50": 151.75685951314227,
-      "p95": 223.15089651199372
-    },
-    "high-bar-squat:trunk": {
-      "n": 16000,
-      "p5": 31.956729013508212,
-      "p50": 42.400645638940574,
-      "p95": 56.90085536275794
-    },
     "medicine-ball-throw:dist": {
       "n": 16000,
-      "p5": 6.666814619489081,
-      "p50": 10.343943684328796,
-      "p95": 14.341920489134905
+      "p5": 6.671086921497289,
+      "p50": 10.366497310085386,
+      "p95": 14.303532346236702
+    },
+    "romanian-deadlift:trunk": {
+      "n": 16000,
+      "p5": 59.53745555750998,
+      "p50": 68.12900227958185,
+      "p95": 75.89189713875021
+    },
+    "shuttle-run-10m:time": {
+      "n": 16000,
+      "p5": 9.96233895398079,
+      "p50": 10.77985720207549,
+      "p95": 12.012419373615193
+    },
+    "sprint-max:speed": {
+      "n": 16000,
+      "p5": 5.358398855247497,
+      "p50": 7.3917327954512215,
+      "p95": 9.618127440507909
     },
     "pull-up:reps": {
       "n": 16000,
@@ -1361,35 +1582,29 @@
       "p50": 8,
       "p95": 15
     },
-    "romanian-deadlift:trunk": {
-      "n": 16000,
-      "p5": 57.949033078374235,
-      "p50": 67.8750161918361,
-      "p95": 77.37149277514905
-    },
     "side-step:count": {
       "n": 16000,
       "p5": 44,
       "p50": 50,
       "p95": 56
     },
-    "sprint-max:speed": {
+    "deadlift:trunk": {
       "n": 16000,
-      "p5": 5.33536059879983,
-      "p50": 7.383238329237511,
-      "p95": 9.623806322190527
+      "p5": 42.10307680088522,
+      "p50": 49.249657752808986,
+      "p95": 56.51035488556442
     },
-    "sit-and-reach:reach": {
+    "standing-long-jump:dist": {
       "n": 16000,
-      "p5": 3.4248235473210764,
-      "p50": 15.213550474112791,
-      "p95": 25.345017940714477
+      "p5": 193.2876751670441,
+      "p50": 237.2271621971457,
+      "p95": 284.2552448620188
     },
-    "sargent-jump:sargent": {
+    "cmj:height": {
       "n": 16000,
-      "p5": 40.203972340692175,
-      "p50": 52.03626010538085,
-      "p95": 65.02110281142217
+      "p5": 25.04371011957225,
+      "p50": 41.136280433313615,
+      "p95": 57.27750102834983
     },
     "sit-up:reps": {
       "n": 16000,
@@ -1397,40 +1612,46 @@
       "p50": 41,
       "p95": 52
     },
-    "standing-long-jump:dist": {
+    "drop-landing:grf": {
       "n": 16000,
-      "p5": 190.71176329267414,
-      "p50": 236.87417628685373,
-      "p95": 285.9680494972096
+      "p5": 2.6472688528087858,
+      "p50": 2.9110852322948966,
+      "p95": 3.2816392699412464
     },
-    "deadlift:trunk": {
+    "back-strength:kg": {
       "n": 16000,
-      "p5": 39.33384141987556,
-      "p50": 49.28486381992744,
-      "p95": 58.588764031924775
+      "p5": 69.29485444429358,
+      "p50": 151.97665655960247,
+      "p95": 223.6996223303633
+    },
+    "sit-and-reach:reach": {
+      "n": 16000,
+      "p5": 3.99477439681839,
+      "p50": 15.191146760107365,
+      "p95": 24.80802788845996
     },
     "sumo-deadlift:trunk": {
       "n": 16000,
-      "p5": 38.71861606317621,
-      "p50": 48.02178018419325,
-      "p95": 56.798254918541176
+      "p5": 41.41684177031856,
+      "p50": 48.13179405892308,
+      "p95": 54.61470036734049
     },
-    "cmj:height": {
+    "sargent-jump:sargent": {
       "n": 16000,
-      "p5": 24.850653879056875,
-      "p50": 41.08783920248762,
-      "p95": 57.339050084343114
+      "p5": 40.34664426305734,
+      "p50": 51.98550907473836,
+      "p95": 64.29873804057205
     },
-    "drop-landing:grf": {
+    "high-bar-squat:trunk": {
       "n": 16000,
-      "p5": 2.6405996175965982,
-      "p50": 2.9095989599670937,
-      "p95": 3.293695898544728
+      "p5": 31.988547291094466,
+      "p50": 42.0484036414184,
+      "p95": 56.14791623895071
     }
   },
   "timingMsPer72Frames": {
-    "p50": 5.910695999977179,
-    "p95": 94.03341000003275,
-    "p99": 218.95088700007182
+    "p50": 6.3059999998658895,
+    "p95": 92.97913800005335,
+    "p99": 237.24637799989432
   }
 }

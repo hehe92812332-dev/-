@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { Finding } from "@/lib/biomech/analysis";
+import type { RegionRisk } from "@/lib/biomech/injury";
 import type { Metric } from "@/lib/biomech/types";
 import { Label, Tag, fmt } from "./parts";
 import type { LiteFrame, LiteResult } from "./transfer";
@@ -300,3 +301,62 @@ export function Summary({ res }: { res: LiteResult }) {
 }
 
 export { Label };
+
+const RISK = {
+  high: { label: "높음", bar: "#d9432b", tone: "risk" as const },
+  moderate: { label: "주의", bar: "#d29a1e", tone: "warn" as const },
+  low: { label: "낮음", bar: "#7fb69e", tone: "teal" as const },
+};
+
+export function Injury({ list, onSeek }: { list: RegionRisk[]; onSeek: (t: number) => void }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const shown = list.filter((r) => r.score > 0);
+  const quiet = list.filter((r) => r.score === 0);
+  return (
+    <div>
+      <ul className="divide-y divide-[#efece6] rounded-[6px] border border-[#e3dfd6] bg-white">
+        {shown.map((r) => {
+          const lv = RISK[r.level];
+          const isOpen = open === r.region || (open === null && r === shown[0] && r.level !== "low");
+          return (
+            <li key={r.region}>
+              <button onClick={() => setOpen(isOpen ? "" : r.region)} className="flex w-full items-center gap-2 px-2.5 py-2 text-left" aria-expanded={isOpen}>
+                <span className="w-[112px] shrink-0 text-[13px] font-semibold">
+                  {r.name}
+                  {r.side && r.side !== "both" && <span className="ml-1 text-[11px] text-[#9a958c]">{r.side === "L" ? "왼쪽" : "오른쪽"}</span>}
+                </span>
+                <span className="relative h-2 flex-1 rounded-full bg-[#efece6]">
+                  <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.max(3, r.score)}%`, background: lv.bar }} />
+                  <span className="absolute inset-y-[-3px] left-[30%] w-px bg-[#d9d4c9]" />
+                  <span className="absolute inset-y-[-3px] left-[60%] w-px bg-[#d9d4c9]" />
+                </span>
+                <span className="w-7 text-right text-[13px] font-bold tabular-nums">{r.score}</span>
+                <Tag tone={lv.tone}>{lv.label}</Tag>
+              </button>
+              {isOpen && (
+                <div className="px-2.5 pb-2.5">
+                  <ul className="space-y-0.5 text-[12px] text-[#4a4741]">
+                    {r.factors.map((f) => (
+                      <li key={f.label} className="flex justify-between gap-2">
+                        <span>· {f.label}</span>
+                        <span className="shrink-0 tabular-nums text-[#9a958c]">+{f.points}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-1.5 text-[12px] leading-relaxed text-[#6e6a63]">→ {r.advice}</p>
+                  {r.t !== undefined && (
+                    <button onClick={() => onSeek(r.t!)} className="mt-1 text-[11px] font-semibold text-[#6e6a63] underline decoration-[#c9c3b7] underline-offset-2 hover:text-[#161616]">
+                      가장 위험한 순간({Math.round(r.t * 100)}%) 보기
+                    </button>
+                  )}
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {quiet.length > 0 && <p className="mt-1.5 text-[11px] text-[#9a958c]">부담이 거의 없는 부위: {quiet.map((r) => r.name).join(", ")}</p>}
+      <p className="mt-1 text-[11px] leading-relaxed text-[#9a958c]">보상 각도·관절 모멘트·충격·가동범위 끝 사용·좌우 차이를 더한 상대 지표입니다. 30 이상 주의, 60 이상 높음. 통증이 있다면 전문가와 상담하세요.</p>
+    </div>
+  );
+}

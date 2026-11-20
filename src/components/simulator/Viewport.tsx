@@ -8,6 +8,7 @@ import type { LiteFrame, LiteResult } from "./transfer";
 import type { Rig } from "./rig";
 
 export interface ViewOpts {
+  risk: boolean;
   ghost: boolean;
   trails: boolean;
   overlays: boolean;
@@ -75,6 +76,7 @@ export function Viewport({ result, tRef, opts, onFrame, preset, presetNonce }: P
     const r = rig.current;
     if (!r || !result) return;
     r.setBody(result.profile.body.heightCm / 100);
+    r.setRisk(result.injury);
     const m = MOVEMENTS.find((x) => x.id === result.moveId);
     r.setFollow(!!m?.view?.followZ);
   }, [ready, result]);

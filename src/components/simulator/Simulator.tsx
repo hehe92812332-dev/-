@@ -6,7 +6,7 @@ import { MOVEMENTS } from "@/lib/biomech/moves";
 import { Inputs } from "./Inputs";
 import { Library } from "./Library";
 import { Btn, Label, Seg, Toggle, fmt } from "./parts";
-import { Charts, Findings, Metrics, Now, Summary } from "./Results";
+import { Charts, Findings, Injury, Metrics, Now, Summary } from "./Results";
 import { decodeProfile, encodeProfile, loadSaved, save, useSimulation } from "./state";
 import type { LiteFrame } from "./transfer";
 import { Viewport, type ViewOpts } from "./Viewport";
@@ -30,7 +30,7 @@ export function Simulator() {
   const tRef = useRef(0);
   const [tUi, setTUi] = useState(0);
   const [frame, setFrame] = useState<LiteFrame | null>(null);
-  const [opts, setOpts] = useState<ViewOpts>({ ghost: false, trails: false, overlays: true, labels: true });
+  const [opts, setOpts] = useState<ViewOpts>({ risk: true, ghost: false, trails: false, overlays: true, labels: true });
   const [preset, setPreset] = useState<Preset>("oblique");
   const [nonce, setNonce] = useState(0);
   const [leftTab, setLeftTab] = useState<"move" | "body">("move");
@@ -124,7 +124,15 @@ export function Simulator() {
   const diag = result && (
     <div className="space-y-5">
       <div>
-        <Label n="A" right={<Summary res={result} />}>
+        <Label n="A" right={<span className="text-[11px] text-[#9a958c]">0~100 · 높을수록 위험</span>}>
+          부위별 부상 위험도
+        </Label>
+        <div className="mt-2.5">
+          <Injury list={result.injury} onSeek={seek} />
+        </div>
+      </div>
+      <div>
+        <Label n="B" right={<Summary res={result} />}>
           보상 패턴 진단
         </Label>
         <div className="mt-2.5">
@@ -132,7 +140,7 @@ export function Simulator() {
         </div>
       </div>
       <div>
-        <Label n="B">핵심 수치 · 같은 키 표준 체형 비교</Label>
+        <Label n="C">핵심 수치 · 같은 키 표준 체형 비교</Label>
         <div className="mt-2">
           <Metrics metrics={result.metrics} />
         </div>
@@ -143,13 +151,13 @@ export function Simulator() {
   const data = result && (
     <div className="space-y-5">
       <div>
-        <Label n="C">현재 프레임</Label>
+        <Label n="D">현재 프레임</Label>
         <div className="mt-2.5">
           <Now f={frame} bodyMass={result.bodyMass} />
         </div>
       </div>
       <div>
-        <Label n="D" right={<span className="text-[11px] text-[#9a958c]">파랑 좌 · 주황 우</span>}>
+        <Label n="E" right={<span className="text-[11px] text-[#9a958c]">파랑 좌 · 주황 우</span>}>
           한 주기 그래프
         </Label>
         <div className="mt-2.5">
@@ -228,6 +236,9 @@ export function Simulator() {
                 ]}
               />
               <div className="flex flex-wrap justify-end gap-1">
+                <Toggle on={opts.risk} onChange={(v) => setOpts((o) => ({ ...o, risk: v }))}>
+                  부상 위험
+                </Toggle>
                 <Toggle on={opts.ghost} onChange={(v) => setOpts((o) => ({ ...o, ghost: v }))}>
                   <span className="hidden sm:inline">표준 체형 겹치기</span>
                   <span className="sm:hidden">표준 겹치기</span>
@@ -241,7 +252,7 @@ export function Simulator() {
               </div>
             </div>
             <div className="pointer-events-none absolute bottom-2 left-3 hidden text-[11px] leading-4 text-[#8a857c] sm:block">
-              <span className="font-semibold text-[#0f8b6c]">●</span> 무게중심 · <span className="font-semibold text-[#7a5cd6]">―</span> 발끝 방향 · <span className="font-semibold text-[#d9433b]">―</span> 무릎 방향 · 드래그로 회전, 휠로 확대
+              <span className="font-semibold text-[#0f8b6c]">●</span> 무게중심 · <span className="font-semibold text-[#7a5cd6]">―</span> 발끝 방향 · <span className="font-semibold text-[#d9433b]">―</span> 무릎 방향 · <span className="font-semibold text-[#d9432b]">●</span> 부상 위험 부위 · 드래그로 회전, 휠로 확대
             </div>
           </div>
 

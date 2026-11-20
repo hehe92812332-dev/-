@@ -97,9 +97,11 @@ async function workerMain() {
       heightCm: Math.round(H * 2) / 2,
       weightKg: Math.round(bmi * (H / 100) ** 2 * 2) / 2,
       footMm: Math.round((std.footMm * k(0.04)) / 5) * 5,
-      armCm: Math.round(std.armCm * k(0.035) * 2) / 2,
-      legCm: Math.round(std.legCm * k(0.03) * 2) / 2,
-      kneeCm: Math.round(std.kneeCm * k(0.04) * 2) / 2,
+      thighCm: Math.round(std.thighCm * k(0.04) * 2) / 2,
+      shankCm: Math.round(std.shankCm * k(0.04) * 2) / 2,
+      upperArmCm: Math.round(std.upperArmCm * k(0.04) * 2) / 2,
+      forearmCm: Math.round(std.forearmCm * k(0.04) * 2) / 2,
+      handCm: Math.round(std.handCm * k(0.04) * 2) / 2,
       torsoCm: Math.round(std.torsoCm * k(0.04) * 2) / 2,
       shoulderCm: Math.round(std.shoulderCm * k(0.05) * 2) / 2,
       hipCm: Math.round(std.hipCm * k(0.06) * 2) / 2,
@@ -111,13 +113,13 @@ async function workerMain() {
       mistake = pick(r, ["inch", "footCm", "span", "lbs", "swapKnee", "nan", "negative", "zero", "inseam"]);
       if (mistake === "inch") body.heightCm = Math.round((body.heightCm as number) / 2.54);
       if (mistake === "footCm") body.footMm = Math.round((body.footMm as number) / 10);
-      if (mistake === "span") body.armCm = body.heightCm as number;
+      if (mistake === "span") body.upperArmCm = Math.round((body.heightCm as number) * 0.45); // 팔 전체를 위팔 칸에
       if (mistake === "lbs") body.weightKg = Math.round((body.weightKg as number) * 2.2);
-      if (mistake === "swapKnee") [body.kneeCm, body.legCm] = [body.legCm, body.kneeCm];
+      if (mistake === "swapKnee") body.thighCm = Math.round((body.heightCm as number) * 0.53); // 넙다리 칸에 다리 전체
       if (mistake === "nan") body.torsoCm = Number.NaN;
       if (mistake === "negative") body.legDiffCm = -12;
       if (mistake === "zero") body.footMm = 0;
-      if (mistake === "inseam") body.legCm = Math.round((body.heightCm as number) * 0.45);
+      if (mistake === "inseam") body.forearmCm = (body.forearmCm as number) + (body.handCm as number); // 아래팔에 손까지 포함
     }
     const dm = defaultMobility();
     const mobSd = persona === "rehab" ? 1.4 : persona === "athlete" ? 0.8 : 1;
@@ -157,7 +159,7 @@ async function workerMain() {
       else loadKg = m.load.default * (0.5 + r());
     }
     const profile = { body, mobility, capacity } as never;
-    const isStd = !mistake && Math.abs((body.kneeCm as number) / std.kneeCm - 1) < 0.02 && Math.abs((body.armCm as number) / std.armCm - 1) < 0.02 && Math.abs((body.torsoCm as number) / std.torsoCm - 1) < 0.02 && Math.abs((body.legCm as number) / std.legCm - 1) < 0.02;
+    const isStd = !mistake && (["thighCm", "shankCm", "upperArmCm", "forearmCm", "torsoCm"] as const).every((k) => Math.abs((body[k] as number) / std[k] - 1) < 0.02);
     const withRef = u % 20 === 0;
     let res;
     const t0 = performance.now();
@@ -208,6 +210,7 @@ async function workerMain() {
       }
     }
     for (const mt of res.metrics) if (!Number.isFinite(mt.value)) nan = true;
+    for (const x of res.injury) if (!Number.isFinite(x.score) || x.score < 0 || x.score > 100) nan = true;
     if (nan) bump("오류:NaN", m.id, ex);
     if (pen > 0.012) bump("오류:발이 바닥 관통", m.id, { ...ex, pen });
     if (floatF > 0.025) bump("오류:접지 발이 뜸", m.id, { ...ex, floatF });
@@ -235,6 +238,10 @@ async function workerMain() {
     const over1rm = res.findings.some((x) => x.id === "overload");
     if (!over1rm && isStd && mobility.ankleDF >= 32 && mobility.hamstring >= 70 && mobility.shoulderFlex >= 160 && mobility.hipFlex >= 115 && capacity.control >= 50 && risk.length)
       bump("불만:평범한 체형인데 위험 경고", m.id, { ...ex, risk: risk.map((x) => x.title) });
+    const highInj = res.injury.filter((x) => x.level === "high");
+    if (!over1rm && isStd && mobility.ankleDF >= 32 && mobility.hamstring >= 70 && mobility.shoulderFlex >= 160 && mobility.hipFlex >= 115 && capacity.control >= 50 && Math.abs(capacity.asym) < 10 && highInj.length)
+      bump("불만:평범한 체형인데 부상 위험 '높음'", m.id, { ...ex, inj: highInj.map((x) => `${x.region}:${x.score} ${x.factors.map((f) => f.label).join("/")}`) });
+    stats["부상위험:높음 부위가 있는 실행"] = (stats["부상위험:높음 부위가 있는 실행"] ?? 0) + (highInj.length ? 1 : 0);
     const adjusted = res.issues.filter((i) => !i.notice);
     if (!mistake && adjusted.length) bump("불만:정상 입력이 자동 수정됨", m.id, { ...ex, issues: adjusted.map((i) => i.message) });
     if (mistake && !res.issues.length && mistake !== "inseam") bump("불만:잘못된 입력을 못 잡음", m.id, ex);
@@ -255,9 +262,9 @@ async function workerMain() {
     if (u % 50 === 7 && !mistake) {
       const pw = res.profile.capacity.power <= 85;
       const tests: [string, string, (p: Record<string, Record<string, number>>) => void, number][] = [
-        ["high-bar-squat", "comp", (p) => (p.body.kneeCm *= 0.92), +1],
-        ["deadlift", "hipH", (p) => (p.body.armCm *= 1.07), +1],
-        ["sit-and-reach", "reach", (p) => (p.body.armCm *= 1.06), +1],
+        ["high-bar-squat", "comp", (p) => ((p.body.thighCm *= 1.06), (p.body.shankCm *= 0.94)), +1],
+        ["deadlift", "hipH", (p) => ((p.body.upperArmCm *= 1.07), (p.body.forearmCm *= 1.07)), +1],
+        ["sit-and-reach", "reach", (p) => ((p.body.upperArmCm *= 1.06), (p.body.forearmCm *= 1.06)), +1],
         ["sit-and-reach", "reach", (p) => (p.mobility.hamstring -= 15), -1],
         ["standing-long-jump", "dist", (p) => (p.capacity.power += 15), +1],
         ["sargent-jump", "sargent", (p) => (p.body.weightKg *= 1.15), -1],

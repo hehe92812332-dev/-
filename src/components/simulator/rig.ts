@@ -80,6 +80,7 @@ export interface LabelPoint {
 }
 
 export interface RigOptions {
+  risk?: boolean;
   ghost: boolean;
   trails: boolean;
   overlays: boolean;
@@ -118,6 +119,9 @@ export class Rig {
   ball: THREE.Mesh;
   kb: THREE.Group;
   plateW: THREE.Mesh;
+  private riskSpots: { mesh: THREE.Mesh; region: string; side: "L" | "R" | "C"; at: (f: LiteFrame) => THREE.Vector3 }[] = [];
+  private riskLevels: Record<string, { level: string; side?: string }> = {};
+  private riskGroup = new THREE.Group();
   private raf = 0;
   private targetGoal = new THREE.Vector3(0, 0.9, 0);
   private camGoal: THREE.Vector3 | null = null;
@@ -242,8 +246,53 @@ export class Rig {
     this.gear.add(this.bar, this.db, this.kb, this.ball, this.plateW);
     this.buildKettlebell();
 
+    this.root.add(this.riskGroup);
+    const P = (k: keyof Joints) => (f: LiteFrame) => tv(f.j[k]);
+    const mid = (a: keyof Joints, b: keyof Joints, u: number) => (f: LiteFrame) => tv(f.j[a]).lerp(tv(f.j[b]), u);
+    const spot = (region: string, side: "L" | "R" | "C", at: (f: LiteFrame) => THREE.Vector3, r: number) => {
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(r, 20, 14),
+        new THREE.MeshBasicMaterial({ color: 0xc8402a, transparent: true, opacity: 0.4, depthWrite: false }),
+      );
+      mesh.renderOrder = 8;
+      this.riskGroup.add(mesh);
+      this.riskSpots.push({ mesh, region, side, at });
+    };
+    spot("lumbar", "C", mid("l5", "t12", 0.5), 0.075);
+    for (const k of ["L", "R"] as const) {
+      spot("knee", k, P(`knee${k}`), 0.055);
+      spot("ankle", k, mid(`ankle${k}`, `heel${k}`, 0.4), 0.048);
+      spot("hip", k, P(`hip${k}`), 0.06);
+      spot("hamstring", k, mid(`hip${k}`, `knee${k}`, 0.5), 0.065);
+      spot("shoulder", k, P(`sh${k}`), 0.055);
+      spot("elbowWrist", k, P(`el${k}`), 0.04);
+      spot("elbowWrist", k, P(`wr${k}`), 0.035);
+    }
     this.resize();
     this.loop();
+  }
+
+  /** 부위별 위험 수준 (low 는 표시 안 함) */
+  setRisk(list: { region: string; level: string; side?: string }[] | undefined) {
+    this.riskLevels = {};
+    for (const r of list ?? []) this.riskLevels[r.region] = { level: r.level, side: r.side };
+  }
+
+  private updateRisk(f: LiteFrame, on: boolean) {
+    this.riskGroup.visible = on;
+    if (!on) return;
+    const pulse = 0.85 + 0.15 * Math.sin(performance.now() / 260);
+    for (const s of this.riskSpots) {
+      const r = this.riskLevels[s.region];
+      const show = !!r && r.level !== "low" && (s.side === "C" || !r.side || r.side === "both" || r.side === s.side);
+      s.mesh.visible = show;
+      if (!show) continue;
+      s.mesh.position.copy(s.at(f));
+      const mat = s.mesh.material as THREE.MeshBasicMaterial;
+      mat.color.setHex(r.level === "high" ? 0xd9432b : 0xe0a21e);
+      mat.opacity = (r.level === "high" ? 0.5 : 0.36) * pulse;
+      s.mesh.scale.setScalar((this.H / 1.75) * (r.level === "high" ? 1.15 : 0.95) * pulse);
+    }
   }
 
   setBody(H: number) {
@@ -520,6 +569,7 @@ export class Rig {
     this.skull.matrix.copy(m4From(f.R.head, j.head));
 
     this.updateGear(f);
+    this.updateRisk(f, opt.risk ?? true);
     this.setSurfaces(f.surfaces);
     this.updateOverlays(f, opt);
     this.updateGhost(ghost, opt.ghost);
