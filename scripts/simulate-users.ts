@@ -47,6 +47,7 @@ const pick = <T,>(r: () => number, xs: T[], w?: number[]) => {
 async function workerMain() {
   const { from, to, seed } = workerData as { from: number; to: number; seed: number };
   const { simulate } = await import("../src/lib/biomech/simulate");
+  const { measureRom, romViolations } = await import("../src/lib/biomech/rom");
   const { MOVEMENTS } = await import("../src/lib/biomech/moves");
   const { standardBody, defaultMobility, defaultCapacity, LIMITS } = await import("../src/lib/biomech/anthropometry");
   const ids = { gym: MOVEMENTS.filter((m) => m.category === "gym"), sport: MOVEMENTS.filter((m) => m.category === "sport"), exam: MOVEMENTS.filter((m) => m.category === "exam") };
@@ -124,13 +125,13 @@ async function workerMain() {
     const dm = defaultMobility();
     const mobSd = persona === "rehab" ? 1.4 : persona === "athlete" ? 0.8 : 1;
     const mobShift = persona === "rehab" ? -8 : persona === "athlete" ? 4 : persona === "exam" ? 3 : 0;
-    // 측정 가능한 생리적 범위로 자른다 (발목 5~60, 고관절 80~150, 하지직거상 30~125, 어깨 100~195, 흉추 10~75)
+    // 측정 가능한 생리적 범위로 자른다 (발목 5~55, 고관절 80~145, 하지직거상 30~125, 어깨 100~190, 흉추 10~75)
     const cl = (x: number, lo: number, hi: number) => Math.round(Math.min(hi, Math.max(lo, x)));
     const mobility = {
-      ankleDF: cl(normal(r, dm.ankleDF + mobShift, 7 * mobSd), 5, 60),
-      hipFlex: cl(normal(r, dm.hipFlex + mobShift * 0.6, 8 * mobSd), 80, 150),
+      ankleDF: cl(normal(r, dm.ankleDF + mobShift, 7 * mobSd), 5, 55),
+      hipFlex: cl(normal(r, dm.hipFlex + mobShift * 0.6, 8 * mobSd), 80, 145),
       hamstring: cl(normal(r, dm.hamstring + mobShift * 1.5, 11 * mobSd), 30, 125),
-      shoulderFlex: cl(normal(r, dm.shoulderFlex + mobShift * 0.6, 10 * mobSd), 100, 195),
+      shoulderFlex: cl(normal(r, dm.shoulderFlex + mobShift * 0.6, 10 * mobSd), 100, 190),
       thoracicRot: cl(normal(r, dm.thoracicRot, 8 * mobSd), 10, 75),
     };
     const pw = { exam: [66, 14], gym: [45, 18], athlete: [76, 12], rehab: [24, 12] }[persona];
@@ -218,6 +219,14 @@ async function workerMain() {
     if (lenErr > 0.003) bump("오류:뼈 길이 변형", m.id, { ...ex, lenErr });
     if (jump > 0) bump("오류:프레임 튐", m.id, { ...ex, jump });
     if (res.solverWarnings.length) bump("오류:계산 경고", m.id, { ...ex, w: res.solverWarnings[0] });
+    // 해부학적 정상 가동범위를 벗어난 관절 (1° 허용 오차)
+    for (const f of b) {
+      const vs = romViolations(measureRom(f.pose), 1);
+      if (vs.length) {
+        bump("오류:관절 가동범위 초과", m.id, { ...ex, rom: vs.map((x) => `${x.label}${x.side ?? ""} ${x.value.toFixed(0)}/${x.limit}`), t: f.t });
+        break;
+      }
+    }
     // 정적 동작에서 무게중심이 지지면 밖인데 경고가 없음
     if (m.kind === "static" && m.support === "feet") {
       const outF = b.filter((f) => !f.support.inside && !f.meta.transient && f.support.margin < -0.01);

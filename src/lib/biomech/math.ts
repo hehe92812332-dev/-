@@ -120,10 +120,10 @@ export function solveMonotone(f: (x: number) => number, lo: number, hi: number, 
 }
 
 /** 2-링크 역기구학. root 에서 target 까지, 중간 관절은 pole 방향으로. 도달 불가하면 최대한 뻗는다. */
-export function ik2(root: Vec3, target: Vec3, l1: number, l2: number, pole: Vec3) {
+export function ik2(root: Vec3, target: Vec3, l1: number, l2: number, pole: Vec3, minD = 0) {
   const d0 = dist(root, target);
   const dmax = (l1 + l2) * 0.9999;
-  const dmin = Math.abs(l1 - l2) + 1e-4;
+  const dmin = Math.max(Math.abs(l1 - l2) + 1e-4, minD);
   const d = clamp(d0, dmin, dmax);
   const dir = d0 > 1e-9 ? scale(sub(target, root), 1 / d0) : ([0, -1, 0] as Vec3);
   let p = sub(pole, scale(dir, dot(pole, dir)));

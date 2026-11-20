@@ -2,7 +2,7 @@
 import type { Body } from "../anthropometry";
 import { angleSpec, feetContacts, G, sampleKeys, type Key } from "../kit";
 import { clamp, mul, Rx, Ry, Rz, sub, type Mat3, type Vec3 } from "../math";
-import { bodyCom, buildPose, type ArmSpec, type Pose, type PoseSpec } from "../pose";
+import { bodyCom, buildPose, measureAngles, type ArmSpec, type Pose, type PoseSpec } from "../pose";
 import type { Contact, Ctx, FrameMeta, LoadState, MoveFrame, Surface } from "../types";
 
 export interface DynOpts {
@@ -34,7 +34,31 @@ export function baseOf(v: Record<string, number>): Mat3 | undefined {
 }
 
 /** 가동성·조절 능력에 따른 키값 보정. 기록할 보상 신호를 meta 에 쓴다 */
+/** 해부학적 정상 가동범위로 키값을 자른다 (사용자 가동성과 무관한 절대 한계) */
+export function anatomicalClamp(v: Record<string, number>) {
+  const c = (k: string, lo: number, hi: number) => {
+    if (k in v) v[k] = clamp(v[k], lo, hi);
+  };
+  for (const k of ["L", "R"]) {
+    c(`hip${k}`, -28, 138);
+    c(`knee${k}`, 0, 150);
+    c(`ank${k}`, -55, 52);
+    c(`hab${k}`, -28, 48);
+    c(`hr${k}`, -45, 42);
+    c(`sh${k}`, -55, 186);
+    c(`el${k}`, 0, 148);
+    c(`sab${k}`, -40, 175);
+    c(`sr${k}`, -90, 75);
+  }
+  c("lumb", -25, 45);
+  c("thor", -20, 40);
+  c("neck", -55, 45);
+  c("side", -35, 35);
+  c("rot", -55, 55);
+}
+
 export function applyLimits(b: Body, v: Record<string, number>, meta: FrameMeta) {
+  anatomicalClamp(v);
   const mob = b.mobility;
   let ham = 0,
     heel = [0, 0] as [number, number],
@@ -221,7 +245,35 @@ export function plantFrame(ctx: Ctx, o: PlantOpts, t: number): MoveFrame {
   const v = sampleKeys(o.keys, t, o.cyclic);
   o.tweak?.(ctx, v, t);
   const meta: FrameMeta = {};
-  const feet = o.feet(ctx, v, t);
+  const feet = o.feet(ctx, v, t).map((f) => ({ ...f })) as [FootPlace, FootPlace];
+  anatomicalClamp(v);
+  // 발끝 방향은 골반 방향 기준 안쪽 25° ~ 바깥 45° 안에서만 (넘으면 앞꿈치를 축으로 발이 따라 돈다)
+  const py = v.yaw ?? 0;
+  feet.forEach((f, i) => {
+    const s = i === 0 ? 1 : -1;
+    const toeOut = s * ((s * (f.yaw ?? 0)) - py);
+    const lim = clamp(toeOut, -25, 45);
+    if (lim !== toeOut) f.yaw = s * (py + s * lim);
+  });
+  // 발이 몸 반대편으로 너무 넘어가지 않게 (고관절 내전 약 25° 한계)
+  {
+    const Px0 = v.px ?? 0,
+      Pz0 = v.pz ?? 0;
+    const yr = (py * Math.PI) / 180;
+    const lx = Math.cos(yr),
+      lz = -Math.sin(yr); // 골반 왼쪽 축 (수평)
+    const minLat = b.hipW / 2 - b.legLen * Math.sin((10 * Math.PI) / 180);
+    feet.forEach((f, i) => {
+      const s = i === 0 ? 1 : -1;
+      const rel = (f.x - Px0) * lx + (f.z - Pz0) * lz;
+      const lat = s * rel;
+      if (lat < minLat) {
+        const push = (minLat - lat) * s;
+        f.x += push * lx;
+        f.z += push * lz;
+      }
+    });
+  }
   const onGround = (["L", "R"] as const).filter((_, i) => (feet[i].y ?? 0) < 0.004);
   const c = (100 - b.capacity.control) / 100;
   const valg: [number, number] = [0, 0];
@@ -231,7 +283,7 @@ export function plantFrame(ctx: Ctx, o: PlantOpts, t: number): MoveFrame {
       valg[k === "L" ? 0 : 1] = Math.max(0, (Math.max(0, c - 0.2) * 14 + 1) * o.stanceComp * (k === "L" ? 1 - a * 1.6 : 1 + a * 1.6) * (onGround.length === 1 ? 1 : 0.6));
     }
     if (onGround.length === 1) {
-      const drop = (c * 7 + 0.8) * o.stanceComp;
+      const drop = Math.min(5, (c * 7 + 0.8) * o.stanceComp);
       v.obliq = (v.obliq ?? 0) + (onGround[0] === "L" ? drop : -drop);
       meta.obliq = v.obliq;
     }
@@ -273,6 +325,23 @@ export function plantFrame(ctx: Ctx, o: PlantOpts, t: number): MoveFrame {
   }
   let spec = standSpec({ ...q, arms: armsA });
   let pose = buildPose(b, spec);
+  // 디딘 발의 발목이 가동범위를 넘으면 뒤꿈치를 든다
+  const dfLim = Math.min(b.mobility.ankleDF, 52);
+  for (let it = 0; it < 3; it++) {
+    const ang = measureAngles(pose);
+    let changed = false;
+    onGround.forEach((k) => {
+      const i = k === "L" ? 0 : 1;
+      const ex = ang.ankleDF[i] - dfLim;
+      if (ex > 0.5) {
+        feet[i].heelRise = (feet[i].heelRise ?? 0) + ex;
+        changed = true;
+      }
+    });
+    if (!changed) break;
+    spec = standSpec({ ...q, feet, arms: armsA });
+    pose = buildPose(b, spec);
+  }
   const arms = o.arms?.(ctx, v, pose);
   if (arms) {
     spec = { ...spec, arms };

@@ -93,7 +93,7 @@ npm run dev
 | `src/auth.ts` | 카카오·네이버 로그인, 관리자 지정 |
 | `src/app/api/*` | 액션, 결제, 온보딩·서류, 관리자, 크론, 회원 탈퇴 API |
 | `src/lib/news*.ts`, `src/server/news.ts` | 건강 소식: 글 형식·기본 글 모음·원고 검증, 공개 규칙(승인 + 게시일이 한국 날짜로 오늘 이전), 검수·예약·원고료 |
-| `src/lib/biomech/*` | **동작 시뮬레이터 엔진**: 체형 → 분절 길이·질량(`anthropometry.ts`), 부위별 부상 위험(`injury.ts`), 관절 사슬·역기구학(`pose.ts`), 스쿼트·힙힌지 균형 풀이(`kit.ts`), 동작 정의(`moves/`), 지면반력·하중·모멘트(`simulate.ts`), 보상 진단(`analysis.ts`) |
+| `src/lib/biomech/*` | **동작 시뮬레이터 엔진**: 체형 → 분절 길이·질량(`anthropometry.ts`), 부위별 부상 위험(`injury.ts`), 관절 가동범위 점검(`rom.ts`), 관절 사슬·역기구학(`pose.ts`), 스쿼트·힙힌지 균형 풀이(`kit.ts`), 동작 정의(`moves/`), 지면반력·하중·모멘트(`simulate.ts`), 보상 진단(`analysis.ts`) |
 | `src/components/simulator/*` | 시뮬레이터 화면: three.js 골격(`rig.ts`), 계산 워커, 체형 입력·동작 목록·진단 패널 |
 | `scripts/simulate-users.ts`, `scripts/ui-check.cjs` | 가상 사용자 100만 명 시뮬레이션, 전 동작 화면 점검 |
 | `src/app/admin` | 관리자 콘솔: 서류 심사, 신고 처리, 환전 이체, 건강 소식 검수·일정, 결제 내역, 처리 기록 |

@@ -27,7 +27,8 @@ function seatContact(y = 0): Contact {
 
 function sitReachTilt(ctx: Ctx) {
   // 햄스트링(하지직거상) 80° → 골반이 수직에서 10° 앞으로
-  return clamp(ctx.body.mobility.hamstring - 70, -40, 50);
+  // 고관절 굴곡(90 + 기울기)이 정상 한계 135°를 넘지 않게
+  return clamp(ctx.body.mobility.hamstring - 70, -40, 44);
 }
 
 const sitReach: Movement = {
@@ -511,7 +512,8 @@ const shuttle: Movement = {
 function sideStepCfg(ctx: Ctx) {
   const b = ctx.body;
   const w = 0.72 * b.legLen;
-  const A = Math.max(0.2, 1.0 - w / 2);
+  // 한 걸음이 다리 길이의 75%를 넘지 않게 (작은 체형이 선까지 무리하게 벌리지 않도록)
+  const A = Math.max(0.2, Math.min(1.0 - w / 2, 0.75 * b.legLen));
   const p = b.capacity.power / 100;
   const comH = 0.55 * b.H;
   const half = (0.95 - 0.3 * p) * Math.pow(comH / 0.96, 0.4) * (b.sex === "f" ? 1.08 : 1) * (1 + ((100 - b.capacity.control) / 100) * 0.12);

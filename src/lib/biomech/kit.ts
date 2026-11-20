@@ -370,7 +370,7 @@ export function solveSquat(ctx: Ctx, cfg: SquatCfg, d: number): SquatSol {
   const kneeStand = b.ankleH[0] + (b.shank[0] + b.shank[1]) / 2;
   const bottomY = cfg.depth * kneeStand;
   // 오버헤드: 팔이 수직이려면 어깨굴곡 180+θ 필요 → 가능한 범위까지만
-  const ohAvail = mob.shoulderFlex + 12;
+  const ohAvail = Math.min(mob.shoulderFlex + 12, 186);
   const trunkMax = cfg.bar === "overhead" ? clamp(ohAvail - 180 + 18, 4, cfg.trunkMax) : cfg.trunkMax;
   const neckFor = (th: number) => -th * 0.45;
 
@@ -461,13 +461,15 @@ export function solveSquat(ctx: Ctx, cfg: SquatCfg, d: number): SquatSol {
     };
     let r = trunkHeel(0);
     let lumbarX = 0;
+    // 고관절 굴곡 한계: 사용자 가동성과 해부학적 상한(135°) 중 작은 값
+    const hipLim = Math.min(mob.hipFlex, 135);
     const hipF = Math.max(r.sol.ang.hipFlex[0], r.sol.ang.hipFlex[1]);
-    if (hipF > mob.hipFlex) {
-      lumbarX = Math.min(lumbarMax, hipF - mob.hipFlex);
+    if (hipF > hipLim) {
+      lumbarX = Math.min(lumbarMax, hipF - hipLim);
       r = trunkHeel(lumbarX);
     }
     const hipF2 = Math.max(r.sol.ang.hipFlex[0], r.sol.ang.hipFlex[1]);
-    const viol = Math.max(r.sol.df - lim - 1, hipF2 - mob.hipFlex - 2);
+    const viol = Math.max(r.sol.df - lim - 1, hipF2 - Math.min(mob.hipFlex, 135) - 2);
     return { ...r, lumbarX, thetaPref, viol };
   };
   let dd = d;

@@ -283,7 +283,7 @@ export function cmjMove(id: string, name: string, en: string, category: "sport" 
 const SLJ_KEYS: Key[] = [
   { t: 0, py: 1, lean: 0, tilt: 0, hipL: 0, kneeL: 2, ankL: 2, hipR: 0, kneeR: 2, ankR: 2, shL: 0, shR: 0, elL: 8, elR: 8, neck: 0, pz: 0 },
   { t: 0.12, lean: 0, tilt: 10, hipL: 12, kneeL: 12, ankL: 6, hipR: 12, kneeR: 12, ankR: 6, shL: 95, shR: 95, elL: 10, elR: 10 },
-  { t: 0.32, lean: 0, tilt: 50, hipL: 108, kneeL: 88, ankL: 32, hipR: 108, kneeR: 88, ankR: 32, shL: -68, shR: -68, elL: 12, elR: 12, neck: -25 },
+  { t: 0.32, lean: 0, tilt: 50, hipL: 108, kneeL: 88, ankL: 32, hipR: 108, kneeR: 88, ankR: 32, shL: -58, shR: -58, elL: 12, elR: 12, neck: -25 },
   { t: 0.47, lean: 44, tilt: 6, hipL: -6, kneeL: 4, ankL: -40, hipR: -6, kneeR: 4, ankR: -40, shL: 150, shR: 150, elL: 6, elR: 6, neck: -5, pz: 0 },
   { t: 0.51, lean: 46, tilt: 4, hipL: -8, kneeL: 2, ankL: -46, hipR: -8, kneeR: 2, ankR: -46, shL: 160, shR: 160, elL: 6, elR: 6 },
   { t: 0.6, lean: 18, tilt: 30, hipL: 105, kneeL: 105, ankL: 0, hipR: 105, kneeR: 105, ankR: 0, shL: 90, shR: 90, elL: 10, elR: 10, neck: -15 },
@@ -631,9 +631,9 @@ export function cutMove(): Movement {
       { t: 0.14, x: -W, z: 0.55 * s, lift: 0, yaw: 0 },
       { t: 0.24, x: -W, z: 0.95 * s, lift: 0.14, yaw: 0 },
       { t: 0.46, x: 0, z: 1.6 * s, lift: 0.12, yaw: -30 },
-      { t: 0.6, x: -0.25 * s, z: 1.85 * s, lift: 0.03, yaw: -45 },
-      { t: 0.64, x: -0.28 * s, z: 1.88 * s, lift: 0, yaw: -45 },
-      { t: 0.78, x: -0.28 * s, z: 1.88 * s, lift: 0, yaw: -45 },
+      { t: 0.6, x: -0.42 * s, z: 1.86 * s, lift: 0.03, yaw: -45 },
+      { t: 0.64, x: -0.5 * s, z: 1.9 * s, lift: 0, yaw: -45 },
+      { t: 0.78, x: -0.5 * s, z: 1.9 * s, lift: 0, yaw: -45 },
       { t: 1, x: -1.1 * s, z: 2.7 * s, lift: 0.12, yaw: -45 },
     ];
     return {

@@ -108,4 +108,19 @@ describe("체형 → 보상 방향", () => {
     expect(sq.injury.find((x) => x.region === "knee")!.score).toBeGreaterThanOrEqual(60);
     for (const x of sq.injury) expect(x.factors.reduce((a, f) => a + f.points, 0)).toBeGreaterThanOrEqual(x.score);
   });
+  it("모든 동작이 해부학적 정상 가동범위 안에서 움직인다 (기본·유연·뻣뻣 체형)", async () => {
+    const { measureRom, romViolations } = await import("@/lib/biomech/rom");
+    const profiles = [
+      {},
+      { mobility: { ankleDF: 55, hipFlex: 145, hamstring: 120, shoulderFlex: 190, thoracicRot: 75 } },
+      { mobility: { ankleDF: 10, hipFlex: 90, hamstring: 40, shoulderFlex: 120, thoracicRot: 15 }, capacity: { power: 20, control: 10, asym: 25 } },
+    ];
+    const bad: string[] = [];
+    for (const p of profiles)
+      for (const m of MOVEMENTS) {
+        const r = simulate(p as never, m.id, { frames: 30, reference: false });
+        for (const f of r.frames) for (const x of romViolations(measureRom(f.pose), 1)) bad.push(`${m.id} ${x.label}${x.side ?? ""} ${x.value.toFixed(0)}° (한계 ${x.limit}°)`);
+      }
+    expect([...new Set(bad)].slice(0, 10)).toEqual([]);
+  });
 });

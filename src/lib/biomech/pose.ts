@@ -1,6 +1,8 @@
 // 관절 각도/역기구학 사양 → 3D 관절 위치, 무게중심.
 import type { Body } from "./anthropometry";
+import { hipRotation, shoulderRotation, thighFront } from "./rom";
 import {
+  len,
   add,
   addScaled,
   angleBetween,
@@ -163,8 +165,31 @@ export function buildPose(body: Body, spec: PoseSpec): Pose {
         const ballW = add(mid, apply(yawM, sub(ballLocal, midLocal)));
         ankle = sub(ballW, apply(Rf, ballLocal));
       }
-      const pole = apply(Ry(s * ((f.yaw ?? 0) - (leg.valgus ?? 0))), [0, 0, 1]);
-      const r = ik2(hip, ankle, Lt, Ls, pole);
+      let footPole = apply(Ry(s * ((f.yaw ?? 0) - (leg.valgus ?? 0))), [0, 0, 1]);
+      // 뒤꿈치가 크게 들린 발(런지 뒷발·벤치 위 발)은 무릎이 바닥 쪽을 향한다
+      const hr = f.heelRise ?? 0;
+      if (hr > 30) footPole = norm(add(footPole, [0, -Math.min(2, (hr - 30) / 25), 0]));
+      // 무릎 방향: 발끝 방향(footPole)을 기본으로, 고관절 회전이 정상 범위(내회전 43°, 외회전 48°)를
+      // 넘거나 무릎이 넙다리 앞쪽이 아닌 쪽으로 접히면(과신전) 넙다리 앞쪽 방향으로 되돌린다
+      const tf = thighFront(Rp, norm(sub(ankle, hip)));
+      const solve = (w: number) => ik2(hip, ankle, Lt, Ls, w > 0 ? norm(add(scale(footPole, 1 - w), scale(tf, w))) : footPole);
+      const legOk = (x: ReturnType<typeof solve>) => {
+        const hr = hipRotation(Rp, hip, x.mid, x.end, s);
+        // 무릎이 엉덩이-발목 선보다 넙다리 앞쪽에 있어야 정상 굴곡
+        const line = sub(x.end, hip);
+        const u = dot(sub(x.mid, hip), line) / Math.max(1e-9, dot(line, line));
+        const off = sub(x.mid, add(hip, scale(line, u)));
+        const bendsRight = len(off) < 0.005 || dot(off, tf) > -0.002;
+        return hr <= 43 && hr >= -48 && bendsRight;
+      };
+      let r = solve(0);
+      if (!legOk(r)) {
+        for (let w = 0.1; w <= 1.0001; w += 0.1) {
+          const c = solve(w);
+          r = c;
+          if (legOk(c)) break;
+        }
+      }
       knee = r.mid;
       over[side === 0 ? "legL" : "legR"] = r.overreach;
       ankle = r.end;
@@ -207,8 +232,35 @@ export function buildPose(body: Body, spec: PoseSpec): Pose {
       const lg = Lf + Lh * 0.45;
       const target = "ik" in arm ? arm.ik : add(c7, apply(Rt, arm.ikLocal));
       const pl = "poleLocal" in arm && arm.poleLocal ? apply(Rt, [arm.poleLocal[0] * s, arm.poleLocal[1], arm.poleLocal[2]]) : undefined;
-      const pole = pl ?? arm.pole ?? add(scale(col(Rt, 2), -1), scale(col(Rt, 0), s * 0.6));
-      const r = ik2(sh, target, Lu, lg, pole);
+      const pole0 = pl ?? arm.pole ?? add(scale(col(Rt, 2), -1), scale(col(Rt, 0), s * 0.6));
+      // 팔꿈치는 150° 이상 접히지 않는다 (위팔·아래팔 사이 30°)
+      const minD = Math.sqrt(Lu * Lu + lg * lg - 2 * Lu * lg * Math.cos((30 * Math.PI) / 180));
+      // 어깨 회전 정상 범위(외회전 108°, 내회전 78°)를 넘으면 팔꿈치가 뒤를 향하도록 되돌린다
+      const solveA = (w: number) => {
+        let pole = pole0;
+        if (w > 0) {
+          const r0 = ik2(sh, target, Lu, lg, pole0, minD);
+          const back = scale(thighFront(Rt, norm(sub(r0.mid, sh))), -1);
+          pole = norm(add(scale(norm(pole0), 1 - w), scale(back, w)));
+        }
+        return ik2(sh, target, Lu, lg, pole, minD);
+      };
+      const armOk = (x: ReturnType<typeof solveA>) => {
+        const d = norm(sub(x.end, x.mid));
+        const sr = shoulderRotation(Rt, sh, x.mid, add(x.mid, d), s);
+        return sr <= 78 && sr >= -108;
+      };
+      let r = solveA(0);
+      if (!armOk(r)) {
+        let lo = 0,
+          hi = 1;
+        for (let it = 0; it < 9; it++) {
+          const mid = (lo + hi) / 2;
+          if (armOk(solveA(mid))) hi = mid;
+          else lo = mid;
+        }
+        r = solveA(hi);
+      }
       el = r.mid;
       grip = r.end;
       const d = norm(sub(grip, el));

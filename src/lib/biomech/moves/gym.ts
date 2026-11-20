@@ -24,8 +24,9 @@ import {
   type HingeCfg,
 } from "../kit";
 import { add, clamp, DEG, lerp, lerpV, Rx, smooth, solveMonotone, sub, type Vec3 } from "../math";
+import { measureRom } from "../rom";
 import { buildPose, measureAngles, type ArmSpec, type FootPlace, type Pose, type PoseSpec } from "../pose";
-import type { Contact, Ctx, LoadState, Metric, Movement, MoveFrame, SimFrame } from "../types";
+import type { Contact, Ctx, FrameMeta, LoadState, Metric, Movement, MoveFrame, SimFrame } from "../types";
 
 const fixed = (sec: number) => () => [
   [0, 0],
@@ -332,16 +333,31 @@ interface SplitCfg {
   trunkPref: number;
 }
 
+/** 앞다리 고관절 굴곡이 가동범위를 넘으면 그 지점까지만 내려간다 */
 function solveSplit(ctx: Ctx, cfg: SplitCfg, d: number, rearZ: number, rearAir: number, latShift = 0.6) {
+  const lim = Math.min(ctx.body.mobility.hipFlex + 8, 132);
+  const over = (dd: number) => (measureRom(solveSplitAt(ctx, cfg, dd, rearZ, rearAir, latShift).pose).hipFlexL ?? 0) - lim;
+  let sol = solveSplitAt(ctx, cfg, d, rearZ, rearAir, latShift);
+  if (d > 0.02 && (measureRom(sol.pose).hipFlexL ?? 0) > lim) {
+    const r = solveMonotone((x) => -over(x), 0, d, 0.003, 16);
+    const dd = Math.min(d, r.x);
+    sol = solveSplitAt(ctx, cfg, dd, rearZ, rearAir, latShift);
+    (sol.meta as FrameMeta).depthLoss = (d - dd) / d;
+  }
+  return sol;
+}
+
+function solveSplitAt(ctx: Ctx, cfg: SplitCfg, d: number, rearZ: number, rearAir: number, latShift = 0.6) {
   const b = ctx.body;
   const H = b.H;
   const lim = b.mobility.ankleDF;
-  const benchH = 0.42 * Math.sqrt(H / 1.75);
+  // 벤치 높이는 무릎 높이 정도 (키에 비례)
+  const benchH = 0.42 * (H / 1.75);
   const rel = relIntensity(b, ctx.loadKg, 0.9);
   const front: FootPlace = { x: b.hipW / 2 + 0.02, z: 0, yaw: 6 };
   // 뒷발 뒤꿈치 각: 발이 뒤로 갈수록·깊이 앉을수록 연속적으로 커진다 (발을 모으면 0)
   const back = clamp(Math.abs(rearZ) / (0.35 * b.legLen), 0, 1);
-  const rearHeel = cfg.bench ? 72 : lerp(20, 62, smooth(d)) * smooth(back) + 25 * Math.min(1, rearAir / 0.03) * (1 - smooth(back) * 0.5);
+  const rearHeel = cfg.bench ? 66 : lerp(20, 62, smooth(d)) * smooth(back) + 25 * Math.min(1, rearAir / 0.03) * (1 - smooth(back) * 0.5);
   const rear: FootPlace = {
     x: -(b.hipW / 2 + 0.02),
     z: rearZ,
@@ -352,7 +368,7 @@ function solveSplit(ctx: Ctx, cfg: SplitCfg, d: number, rearZ: number, rearAir: 
   const feet: [FootPlace, FootPlace] = [front, rear];
   const kneeStand = b.ankleH[0] + b.shank[0];
   const top = maxPelvisY(b, { Pz: rearZ / 2, feet });
-  const bottomY = kneeStand * (cfg.bench ? 0.95 : 1.02);
+  const bottomY = kneeStand * (cfg.bench ? 1.02 : 1.02);
   const frontMid = 0;
   const rearPt = anklePos(b, 1, rear)[2] + b.foot.ball;
   const tz = rearZ === 0 ? frontMid : lerp(rearPt, frontMid, cfg.frontShare);
@@ -414,9 +430,38 @@ function solveSplit(ctx: Ctx, cfg: SplitCfg, d: number, rearZ: number, rearAir: 
       sol = solveZ(theta, heel);
     }
   }
+  // 벤치 위 뒷발: 발목이 정상 범위(배측굴곡 ≤ 35°)에 들도록 발등 각도를 맞춘다
+  if (cfg.bench) {
+    const dfR = (h: number) => {
+      const ft: [FootPlace, FootPlace] = [sol.spec.legs[0] && "ik" in sol.spec.legs[0] ? sol.spec.legs[0].ik : front, { ...rear, heelRise: h }];
+      const spec2 = { ...sol.spec, legs: [sol.spec.legs[0], { ik: ft[1], valgus: 0 }] as PoseSpec["legs"] };
+      const p2 = buildPose(b, spec2);
+      return { spec2, p2, df: measureAngles(p2).ankleDF[1] };
+    };
+    const cur = dfR(rear.heelRise ?? 66);
+    if (cur.df > 35) {
+      const r = solveMonotone((h) => 35 - dfR(h).df, rear.heelRise ?? 66, 120, 0.3, 14);
+      const best = dfR(r.x);
+      Object.assign(sol, { spec: best.spec2, pose: best.p2, a: measureAngles(best.p2) });
+    }
+  }
+  // 뒷다리 고관절 신전이 정상 한계(약 25°)를 넘으면 골반이 앞으로 기울고 허리가 젖혀져 보상한다
+  let extComp = 0;
+  {
+    const rr = measureRom(sol.pose);
+    const deficit = -26 - (rr.hipFlexR ?? 0);
+    const tiltChange = deficit > 0.5 ? Math.min(28, deficit) : 0;
+    if (tiltChange !== 0) {
+      extComp = Math.max(0, tiltChange);
+      const spec2 = { ...sol.spec, pelvis: { ...sol.spec.pelvis, tilt: (sol.spec.pelvis.tilt ?? 0) + tiltChange }, lumbar: { ...(sol.spec.lumbar ?? {}), flex: (sol.spec.lumbar?.flex ?? 0) - tiltChange } };
+      const pose2 = buildPose(b, spec2);
+      Object.assign(sol, { spec: spec2, pose: pose2, a: measureAngles(pose2) });
+    }
+  }
   return {
     ...sol,
     meta: {
+      lumbarExt: extComp,
       heelRise: [heel, 0] as [number, number],
       valgus: [valg[0], 0] as [number, number],
       trunkLean: sol.a.trunkLean,
@@ -442,8 +487,9 @@ const bulgarian: Movement = {
   frame: (ctx, t) => {
     const b = ctx.body;
     const { d, phase } = repPhase(t);
-    const rearZ = -(0.62 * b.legLen + b.foot.len * 0.3);
-    const s = solveSplit(ctx, { bench: true, stride: 0.62, frontShare: 0.9, trunkPref: 32 }, d, rearZ, 0, 0.75);
+    // 뒷발은 다리 길이만큼 뒤 (가까우면 뒷무릎이 옆으로 접히고 고관절이 과신전된다)
+    const rearZ = -(0.86 * b.legLen + b.foot.len * 0.25);
+    const s = solveSplit(ctx, { bench: true, stride: 0.62, frontShare: 0.9, trunkPref: 24 }, d, rearZ, 0, 0.75);
     const surfaces = [{ kind: "bench" as const, center: [-(b.hipW / 2 + 0.02), s.benchH / 2, rearZ - 0.12] as Vec3, size: [0.32, s.benchH, 0.42] as Vec3 }];
     return frame(ctx, s.spec, s.pose, { phase, meta: s.meta, load: s.load, surfaces });
   },
@@ -553,9 +599,12 @@ const benchPress: Movement = {
     const arch = 6 + (b.capacity.control / 100) * 8;
     const Py = benchH + 0.055 * H;
     const legLen = b.thigh[0] + b.shank[0];
+    // 정강이가 거의 수직이 되도록 발을 무릎 아래에 둔다 (발이 가까우면 넙다리가 처져 고관절이 과신전된다)
+    const fz = b.thigh[0] * 0.97 + (b.foot.toe - b.foot.heel) / 2;
+    void legLen;
     const feet: [FootPlace, FootPlace] = [
-      { x: b.hipW / 2 + 0.16, z: 0.55 * legLen, yaw: 18 },
-      { x: -(b.hipW / 2 + 0.16), z: 0.55 * legLen, yaw: 18 },
+      { x: b.hipW / 2 + 0.14, z: fz, yaw: 16 },
+      { x: -(b.hipW / 2 + 0.14), z: fz, yaw: 16 },
     ];
     const q = {
       Py,
@@ -577,7 +626,9 @@ const benchPress: Movement = {
     const ankZ = feet[0].z - (b.foot.toe - b.foot.heel) / 2 - p1.j.hipL[2];
     const lat = feet[0].x - b.hipW / 2;
     const vert = Math.sqrt(Math.max(0, reachL * reachL - ankZ * ankZ - lat * lat));
-    const stepH = Math.max(0, hipY - vert - b.ankleH[0]);
+    // 무릎이 고관절보다 너무 낮으면(넙다리가 20° 넘게 처지면) 고관절이 과신전되므로 발판을 높인다
+    const kneeNeed = hipY - b.thigh[0] * Math.sin((18 * Math.PI) / 180);
+    const stepH = Math.max(0, hipY - vert - b.ankleH[0], kneeNeed - b.ankleH[0] - b.shank[0]);
     if (stepH > 0.005) for (const f of feet) f.y = Math.ceil(stepH * 50) / 50;
     const reach = b.upperArm + b.forearm + b.hand * 0.45;
     const gh = b.shW * 1.15;
@@ -587,17 +638,30 @@ const benchPress: Movement = {
     const lock: Vec3 = [0, sm[1] + armVert, sm[2]];
     const touch = thoraxPoint(p2, [0, -0.55 * b.thorax, 0.125 * H]);
     touch[1] += 0.015;
-    const bar = lerpV(lock, touch, smooth(d));
-    const spec = translateSpec(
-      standSpec({
-        ...q,
-        arms: [
-          { ik: [gh, bar[1], bar[2]], pole: [0.9, -1, 0.35] },
-          { ik: [-gh, bar[1], bar[2]], pole: [-0.9, -1, 0.35] },
-        ],
-      }),
-      [0, dy, 0],
-    );
+    const mkSpec = (e: number) => {
+      const br = lerpV(lock, touch, e);
+      return {
+        br,
+        spec: translateSpec(
+          standSpec({
+            ...q,
+            arms: [
+              { ik: [gh, br[1], br[2]], pole: [0.9, -1, 0.35] },
+              { ik: [-gh, br[1], br[2]], pole: [-0.9, -1, 0.35] },
+            ],
+          }),
+          [0, dy, 0],
+        ),
+      };
+    };
+    // 어깨 신전은 60°까지: 팔이 길어 그 전에 가슴에 닿지 못하면 바가 거기서 멈춘다
+    const shExt = (e: number) => {
+      const r = measureRom(buildPose(b, mkSpec(e).spec));
+      return Math.min(r.shFlexL ?? 0, r.shFlexR ?? 0);
+    };
+    let e = smooth(d);
+    if (e > 0.05 && shExt(e) < -60) e = solveMonotone((x) => shExt(x) + 60, 0, e, 0.002, 16).x;
+    const { br: bar, spec } = mkSpec(e);
     const pose = buildPose(b, spec);
     const load = barbell(ctx.loadKg, bar);
     const contacts: Contact[] = [...feetContacts(b, pose), { id: "back", group: "body", pts: benchPts(benchH, -0.35) }];
@@ -685,7 +749,7 @@ const pushUp: Movement = {
       const u: Vec3 = [0, Math.sin(alpha * DEG), Math.cos(alpha * DEG)];
       const L = Math.min(b.thigh[0] + b.shank[0], b.thigh[1] + b.shank[1]) * 0.999;
       const P: Vec3 = [0, aL[1] + u[1] * L, aL[2] + u[2] * L];
-      const q = { Py: P[1] - sag * 0.004, Pz: P[2], tau: 0, lumbar: -sag, thorax: sag * 0.3, neck: -8, base: Rx(90 - alpha), feet };
+      const q = { Py: P[1], Pz: P[2], tau: 0, lumbar: -sag, thorax: sag * 0.3, neck: -8, base: Rx(90 - alpha), feet };
       const p1 = buildPose(b, standSpec({ ...q, arms: [{ sh: {}, elbow: 0 }, { sh: {}, elbow: 0 }] }));
       const arms: [ArmSpec, ArmSpec] = [
         { ik: [p1.j.shL[0] + 0.07, 0.025, p1.j.shL[2] + 0.03], pole: [0.8, 0.3, -1] },
