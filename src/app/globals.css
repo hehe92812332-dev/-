@@ -99,3 +99,17 @@ header .sim-range,
 .sim-track .sim-range {
   background: linear-gradient(#d9d4c9, #d9d4c9) center / 100% 2px no-repeat;
 }
+
+/* 동작이 처음으로 돌아갈 때 화면을 잠깐 덮었다 걷어 순간이동을 가린다 */
+@keyframes sim-fade {
+  0% { opacity: 0; }
+  35% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.sim-fade {
+  opacity: 0;
+  animation: sim-fade 0.55s ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sim-fade { animation: none; }
+}

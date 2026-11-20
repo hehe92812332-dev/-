@@ -339,13 +339,15 @@ function solveSplit(ctx: Ctx, cfg: SplitCfg, d: number, rearZ: number, rearAir: 
   const benchH = 0.42 * Math.sqrt(H / 1.75);
   const rel = relIntensity(b, ctx.loadKg, 0.9);
   const front: FootPlace = { x: b.hipW / 2 + 0.02, z: 0, yaw: 6 };
-  const rearHeel = cfg.bench ? 72 : lerp(20, 62, smooth(d)) * (rearAir > 0 ? 0.6 : 1) + (rearAir > 0 ? 20 : 0);
+  // 뒷발 뒤꿈치 각: 발이 뒤로 갈수록·깊이 앉을수록 연속적으로 커진다 (발을 모으면 0)
+  const back = clamp(Math.abs(rearZ) / (0.35 * b.legLen), 0, 1);
+  const rearHeel = cfg.bench ? 72 : lerp(20, 62, smooth(d)) * smooth(back) + 25 * Math.min(1, rearAir / 0.03) * (1 - smooth(back) * 0.5);
   const rear: FootPlace = {
     x: -(b.hipW / 2 + 0.02),
     z: rearZ,
     y: cfg.bench ? benchH : rearAir,
     yaw: 2,
-    heelRise: rearZ === 0 && !cfg.bench && rearAir === 0 ? 0 : rearHeel,
+    heelRise: rearHeel,
   };
   const feet: [FootPlace, FootPlace] = [front, rear];
   const kneeStand = b.ankleH[0] + b.shank[0];

@@ -140,7 +140,7 @@ export function useSimulation(profile: Profile, moveId: string, loadKg: number) 
         const [{ simulate }, { pack }] = await Promise.all([import("@/lib/biomech/simulate"), import("./transfer")]);
         try {
           const t0 = performance.now();
-          const r = pack(simulate(profile, moveId, { loadKg, frames: 72 }), performance.now() - t0);
+          const r = pack(simulate(profile, moveId, { loadKg, frames: 120 }), performance.now() - t0);
           if (latest.current === id) {
             setResult(r);
             setPending(false);
@@ -169,12 +169,28 @@ export function frameAt(frames: LiteFrame[], t: number, cyclic: boolean): LiteFr
   const a = frames[i0],
     b = frames[i1];
   if (u < 1e-3 || i0 === i1) return a;
-  const lv = (p: number[], q: number[]) => [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u, p[2] + (q[2] - p[2]) * u] as [number, number, number];
+  // 앞뒤 프레임까지 쓰는 3차(Catmull-Rom) 보간 → 속도가 끊기지 않는다
+  const iPrev = cyclic ? (i0 - 1 + n) % n : Math.max(0, i0 - 1);
+  const iNext = cyclic ? (i1 + 1) % n : Math.min(n - 1, i1 + 1);
+  const pa = frames[iPrev],
+    pb = frames[iNext];
+  const u2 = u * u,
+    u3 = u2 * u;
+  const cr = (p0: number, p1: number, p2: number, p3: number) =>
+    0.5 * (2 * p1 + (-p0 + p2) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u2 + (-p0 + 3 * p1 - 3 * p2 + p3) * u3);
+  const far = (x: number[], y: number[]) => Math.hypot(x[0] - y[0], x[2] - y[2]) > 0.6;
+  const lv = (p: number[], q: number[], p0?: number[], p3?: number[]) => {
+    if (!p0 || !p3 || far(p0, p) || far(q, p3)) return [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u, p[2] + (q[2] - p[2]) * u] as [number, number, number];
+    return [cr(p0[0], p[0], q[0], p3[0]), cr(p0[1], p[1], q[1], p3[1]), cr(p0[2], p[2], q[2], p3[2])] as [number, number, number];
+  };
   // 순간이동(동작 경계) 은 보간하지 않는다
   const jump = Math.hypot(a.com[0] - b.com[0], a.com[2] - b.com[2]) > 0.6;
   if (jump) return u < 0.5 ? a : b;
   const j = {} as LiteFrame["j"];
-  for (const k in a.j) (j as Record<string, number[]>)[k] = lv(a.j[k as keyof LiteFrame["j"]], b.j[k as keyof LiteFrame["j"]]);
+  for (const k in a.j) {
+    const kk = k as keyof LiteFrame["j"];
+    (j as Record<string, number[]>)[k] = lv(a.j[kk], b.j[kk], pa.j[kk], pb.j[kk]);
+  }
   const lm = (p: number[], q: number[]) => p.map((v, i) => v + (q[i] - v) * u) as unknown as LiteFrame["R"]["pelvis"];
   const R = {} as LiteFrame["R"];
   for (const k in a.R) (R as Record<string, unknown>)[k] = lm(a.R[k as keyof LiteFrame["R"]], b.R[k as keyof LiteFrame["R"]]);
@@ -183,7 +199,7 @@ export function frameAt(frames: LiteFrame[], t: number, cyclic: boolean): LiteFr
     ...near,
     j,
     R,
-    com: lv(a.com, b.com),
+    com: lv(a.com, b.com, pa.com, pb.com),
     load: a.load && b.load && a.load.kind === b.load.kind ? { ...near.load!, center: lv(a.load.center, b.load.center) } : near.load,
   };
 }

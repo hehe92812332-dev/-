@@ -68,15 +68,50 @@ export function Simulator() {
 
   // 재생
   const duration = result?.duration ?? 3;
+  const [fade, setFade] = useState(0);
+  // 순환 동작이거나 끝 자세가 첫 자세와 같으면 이어서 반복
+  const seamless = useMemo(() => {
+    if (!result || !result.frames.length) return true;
+    if (move.dynamics?.cyclic) return true;
+    const a = result.frames[0].j,
+      b = result.frames[result.frames.length - 1].j;
+    let gap = 0;
+    for (const k in a) {
+      const p = a[k as keyof typeof a],
+        q = b[k as keyof typeof b];
+      gap = Math.max(gap, Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]));
+    }
+    return gap < 0.04;
+  }, [result, move.dynamics?.cyclic]);
   useEffect(() => {
     let raf = 0;
     let last = performance.now();
     let lastUi = 0;
+    let hold = 0;
+    let fading = false;
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      if (playing) tRef.current = (tRef.current + (dt * Number(speed)) / Math.max(0.2, duration)) % 1;
+      if (playing) {
+        const next = tRef.current + (dt * Number(speed)) / Math.max(0.2, duration);
+        if (next < 1 || seamless) tRef.current = next % 1;
+        else {
+          // 끝 자세와 첫 자세가 다른 동작(점프·던지기·방향 전환): 끝에서 잠깐 멈췄다가 화면을 어둡게 넘기고 처음으로
+          tRef.current = 0.9999;
+          hold += dt;
+          // 화면을 덮기 시작하고, 완전히 덮인 순간(0.19초 뒤)에 처음 자세로 바꾼다
+          if (hold > 0.6 && !fading) {
+            fading = true;
+            setFade((n) => n + 1);
+          }
+          if (hold > 0.8) {
+            hold = 0;
+            fading = false;
+            tRef.current = 0;
+          }
+        }
+      }
       if (now - lastUi > 66) {
         lastUi = now;
         setTUi(tRef.current);
@@ -84,7 +119,7 @@ export function Simulator() {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [playing, speed, duration]);
+  }, [playing, speed, duration, seamless]);
 
   const seek = useCallback((t: number) => {
     tRef.current = Math.min(0.999, Math.max(0, t));
@@ -213,6 +248,7 @@ export function Simulator() {
 
           <div className="relative h-[58vh] min-h-[360px] bg-[#f6f4ef] lg:h-auto lg:flex-1">
             <Viewport result={result} tRef={tRef} opts={opts} onFrame={onFrame} preset={preset} presetNonce={nonce} />
+            {fade > 0 && <div key={fade} className="sim-fade pointer-events-none absolute inset-0 bg-[#f6f4ef]" aria-hidden="true" />}
             <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-1">
               <span className="pointer-events-auto w-fit rounded-[4px] bg-[#161616] px-2 py-[3px] text-[12px] font-bold text-white">{frame?.phase ?? "계산 중"}</span>
               {pending && <span className="w-fit rounded-[4px] bg-white/90 px-2 py-[2px] text-[11px] font-semibold text-[#6e6a63] ring-1 ring-[#e3dfd6]">다시 계산하는 중…</span>}

@@ -72,6 +72,61 @@ class Bone {
   }
 }
 
+/** 손가락·발가락 같은 작은 뼈: 인스턴스 메시 하나로 그린다 */
+class SmallBones {
+  cyl: THREE.InstancedMesh;
+  sph: THREE.InstancedMesh;
+  private n = 0;
+  private m = 0;
+  private q = new THREE.Quaternion();
+  private mx = new THREE.Matrix4();
+  private sc = new THREE.Vector3();
+  private d = new THREE.Vector3();
+  constructor(group: THREE.Group, mat: THREE.Material, knob: THREE.Material, cap: number) {
+    const g = new THREE.CylinderGeometry(1, 1, 1, 8, 1);
+    g.translate(0, 0.5, 0);
+    this.cyl = new THREE.InstancedMesh(g, mat, cap);
+    this.sph = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), knob, cap * 2);
+    this.cyl.castShadow = this.sph.castShadow = true;
+    this.cyl.frustumCulled = this.sph.frustumCulled = false;
+    group.add(this.cyl, this.sph);
+  }
+  begin() {
+    this.n = 0;
+    this.m = 0;
+  }
+  bone(a: V, b: V, r: number, knobA = 1.3, knobB = 1.3) {
+    if (this.n >= this.cyl.count && this.n >= (this.cyl.instanceMatrix.count ?? 0)) return;
+    this.d.subVectors(b, a);
+    const L = Math.max(1e-4, this.d.length());
+    this.q.setFromUnitVectors(UP, this.d.multiplyScalar(1 / L));
+    this.mx.compose(a, this.q, this.sc.set(r, L, r));
+    this.cyl.setMatrixAt(this.n++, this.mx);
+    if (knobA > 0) this.ball(a, r * knobA);
+    if (knobB > 0) this.ball(b, r * knobB);
+  }
+  ball(p: V, r: number) {
+    if (this.m >= this.sph.instanceMatrix.count) return;
+    this.mx.compose(p, this.q.identity(), this.sc.set(r, r, r));
+    this.sph.setMatrixAt(this.m++, this.mx);
+  }
+  end() {
+    this.cyl.count = this.n;
+    this.sph.count = this.m;
+    this.cyl.instanceMatrix.needsUpdate = true;
+    this.sph.instanceMatrix.needsUpdate = true;
+  }
+}
+
+/** 축(axis)에 수직인 굽힘 방향(toward)으로 dir 을 각도만큼 돌린다 → [새 방향, 새 굽힘 방향] */
+function bend(dir: V, toward: V, deg: number): [V, V] {
+  const a = (deg * Math.PI) / 180;
+  const t = toward.clone().sub(dir.clone().multiplyScalar(toward.dot(dir))).normalize();
+  const nd = dir.clone().multiplyScalar(Math.cos(a)).addScaledVector(t, Math.sin(a)).normalize();
+  const nt = t.clone().multiplyScalar(Math.cos(a)).addScaledVector(dir, -Math.sin(a)).normalize();
+  return [nd, nt];
+}
+
 export interface LabelPoint {
   key: string;
   x: number;
@@ -101,6 +156,9 @@ export class Rig {
   H = 1.75;
   bones: Record<string, Bone> = {};
   vert: THREE.InstancedMesh;
+  small!: SmallBones;
+  patella: Record<string, THREE.Mesh> = {};
+  scap: Record<string, THREE.Mesh> = {};
   ribs: THREE.Mesh[] = [];
   sternum: THREE.Mesh;
   pelvis: THREE.Group;
@@ -188,6 +246,25 @@ export class Rig {
     this.scene.add(this.root);
     this.root.add(this.skel, this.gear, this.over, this.ghost, this.trails, this.surfaces);
 
+    this.small = new SmallBones(this.skel, this.mats.bone, this.mats.knob, 140);
+    for (const k of ["L", "R"]) {
+      const pt = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), this.mats.knob);
+      pt.castShadow = true;
+      this.patella[k] = pt;
+      this.skel.add(pt);
+      // 아래가 뾰족한 역삼각형 판
+      const tri = new THREE.Shape();
+      tri.moveTo(-0.55, 0.5);
+      tri.lineTo(0.6, 0.45);
+      tri.lineTo(-0.15, -0.95);
+      tri.closePath();
+      const sg = new THREE.ExtrudeGeometry(tri, { depth: 0.6, bevelEnabled: true, bevelThickness: 0.25, bevelSize: 0.12, bevelSegments: 2 });
+      if (k === "R") sg.scale(-1, 1, 1);
+      const sc2 = new THREE.Mesh(sg, this.mats.shade);
+      sc2.castShadow = true;
+      this.scap[k] = sc2;
+      this.skel.add(sc2);
+    }
     this.vert = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), this.mats.knob, 26);
     this.vert.castShadow = true;
     this.skel.add(this.vert);
@@ -312,15 +389,10 @@ export class Rig {
       mk(`tibia${k}`, 0.0145, 0.011, 0.0, 0.017);
       mk(`fibula${k}`, 0.005, 0.005, 0.008, 0.008, this.mats.shade);
       mk(`calc${k}`, 0.017, 0.012, 0.018, 0);
-      mk(`meta${k}`, 0.011, 0.0075, 0, 0.011);
-      mk(`meta2${k}`, 0.007, 0.005, 0, 0.008);
-      mk(`toes${k}`, 0.0065, 0.004, 0, 0.006);
       mk(`humerus${k}`, 0.012, 0.0095, 0.024, 0.018);
       mk(`radius${k}`, 0.0072, 0.0062, 0.0, 0.01);
       mk(`ulna${k}`, 0.0062, 0.0052, 0.012, 0, this.mats.shade);
-      mk(`hand${k}`, 0.009, 0.004, 0.0, 0.006);
       mk(`clav${k}`, 0.0062, 0.0062, 0.008, 0.009);
-      mk(`scap${k}`, 0.004, 0.022, 0, 0, this.mats.shade);
     }
     mk("neck", 0.011, 0.011, 0, 0, this.mats.knob);
     // 골반
@@ -330,12 +402,13 @@ export class Rig {
     ring.scale.set(0.072 * H, 0.05 * H, 0.072 * H);
     ring.position.set(0, 0.012 * H, 0.0);
     ring.castShadow = true;
-    const wingG = new THREE.SphereGeometry(1, 18, 12, 0, Math.PI);
+    // 장골 날개: 위쪽이 넓은 얇은 부채꼴, 앞바깥쪽(약 40°)을 향한다
+    const wingG = new THREE.SphereGeometry(1, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.55);
     for (const sgn of [1, -1]) {
       const w = new THREE.Mesh(wingG, this.mats.bone);
-      w.scale.set(0.048 * H, 0.048 * H, 0.012 * H);
-      w.rotation.set(0.15, sgn * 1.2, 0);
-      w.position.set(sgn * 0.062 * H, 0.045 * H, -0.012 * H);
+      w.scale.set(0.043 * H, 0.05 * H, 0.008 * H);
+      w.rotation.set(0.12, sgn * 0.7, 0);
+      w.position.set(sgn * 0.058 * H, 0.03 * H, -0.01 * H);
       w.castShadow = true;
       this.pelvis.add(w);
     }
@@ -362,6 +435,126 @@ export class Rig {
     }
     this.vert.geometry.dispose();
     this.vert.geometry = new THREE.BoxGeometry(0.028 * s, 0.016 * s, 0.024 * s);
+  }
+
+  /** 손을 쥐고 있는지 (바·덤벨·케틀벨·철봉) */
+  private gripping(f: LiteFrame, k: "L" | "R") {
+    const g = tv(f.j[`grip${k}`]);
+    const L = f.load;
+    if (L && L.carried && !L.released) {
+      if (L.kind === "dumbbell") return 1;
+      if (L.kind === "barbell" && !L.onBody) return Math.hypot(g.y - L.center[1], g.z - L.center[2]) < 0.07 ? 1 : 0;
+      if (L.kind === "barbell" && L.onBody) return Math.hypot(g.y - L.center[1], g.z - L.center[2]) < 0.09 ? 0.85 : 0;
+      if (L.kind === "kettlebell") return g.distanceTo(tv(L.center)) < 0.3 ? 1 : 0;
+      if (L.kind === "medball" || L.kind === "handball") return g.distanceTo(tv(L.center)) < 0.3 ? 0.45 : 0;
+    }
+    for (const sf of f.surfaces ?? []) if (sf.kind === "bar" && Math.abs(g.y - sf.center[1]) < 0.06) return 1;
+    return 0;
+  }
+
+  private drawHand(f: LiteFrame, k: "L" | "R") {
+    const sc = this.H / 1.75;
+    const s = k === "L" ? 1 : -1;
+    const wr = tv(f.j[`wr${k}`]),
+      fi = tv(f.j[`fing${k}`]);
+    const L = Math.max(0.05, wr.distanceTo(fi));
+    const Rt = f.R.thorax;
+    const fwd = new THREE.Vector3(Rt[2], Rt[5], Rt[8]);
+    const flat = f.contacts.some((c) => c.id === `hand${k}`) && wr.y < 0.12;
+    let d: V, w: V, n: V;
+    if (flat) {
+      // 바닥을 짚은 손: 손바닥이 바닥, 손가락은 앞으로
+      d = new THREE.Vector3(fwd.x, 0, fwd.z);
+      if (d.lengthSq() < 1e-4) d.set(0, 0, 1);
+      d.normalize();
+      n = new THREE.Vector3(0, -1, 0);
+      w = new THREE.Vector3().crossVectors(d, n).normalize().multiplyScalar(-s);
+    } else {
+      d = new THREE.Vector3().subVectors(fi, wr).normalize();
+      w = fwd.clone().sub(d.clone().multiplyScalar(fwd.dot(d)));
+      if (w.lengthSq() < 1e-4) w.set(Rt[0] * s, Rt[3] * s, Rt[6] * s);
+      w.normalize();
+      n = new THREE.Vector3().crossVectors(d, w).normalize().multiplyScalar(s);
+    }
+    const grip = flat ? 0 : this.gripping(f, k);
+    const curl = [12 + 50 * grip, 16 + 58 * grip, 10 + 34 * grip];
+    const pw = 0.046 * this.H; // 손바닥 너비
+    const palm = 0.44 * L;
+    const offs = [0.36, 0.12, -0.12, -0.36];
+    const lens = [0.92, 1.0, 0.94, 0.74];
+    const segs = [0.46, 0.31, 0.23];
+    const rad = [0.0047, 0.005, 0.0046, 0.004];
+    for (let i = 0; i < 4; i++) {
+      const base = wr.clone().addScaledVector(d, 0.012 * sc).addScaledVector(w, offs[i] * pw * 0.45);
+      const knuckle = wr.clone().addScaledVector(d, palm * (i === 3 ? 0.9 : 1)).addScaledVector(w, offs[i] * pw);
+      this.small.bone(base, knuckle, rad[i] * sc, 1.2, 1.35);
+      let p = knuckle,
+        dir = d.clone(),
+        tw = n.clone();
+      const fl = (L - palm) * lens[i];
+      for (let j = 0; j < 3; j++) {
+        [dir, tw] = bend(dir, tw, curl[j]);
+        const q = p.clone().addScaledVector(dir, fl * segs[j]);
+        this.small.bone(p, q, rad[i] * sc * (1 - j * 0.18), 0, 1.25);
+        p = q;
+      }
+    }
+    // 엄지
+    const tb = wr.clone().addScaledVector(d, 0.01 * sc).addScaledVector(w, 0.3 * pw);
+    let tdir = d.clone().multiplyScalar(0.55).addScaledVector(w, 0.75).addScaledVector(n, 0.35).normalize();
+    let ttw = n.clone();
+    const tl = [0.24 * L, 0.18 * L, 0.14 * L];
+    let tp = tb;
+    for (let j = 0; j < 3; j++) {
+      if (j > 0) [tdir, ttw] = bend(tdir, ttw, 8 + 32 * grip);
+      const q = tp.clone().addScaledVector(tdir, tl[j]);
+      this.small.bone(tp, q, (j === 0 ? 0.0055 : 0.0048) * sc, j === 0 ? 1.2 : 0, 1.25);
+      tp = q;
+    }
+    // 손목뼈 덩어리
+    this.small.ball(wr.clone().addScaledVector(d, 0.018 * sc), 0.011 * sc);
+  }
+
+  private drawFoot(f: LiteFrame, k: "L" | "R") {
+    const sc = this.H / 1.75;
+    const s = k === "L" ? 1 : -1;
+    const Rf = k === "L" ? f.R.footL : f.R.footR;
+    const lat = new THREE.Vector3(Rf[0], Rf[3], Rf[6]).multiplyScalar(s).normalize(); // 바깥쪽
+    const up = new THREE.Vector3(Rf[1], Rf[4], Rf[7]).normalize();
+    const ank = tv(f.j[`ankle${k}`]),
+      ball = tv(f.j[`ball${k}`]),
+      toe = tv(f.j[`toe${k}`]),
+      heel = tv(f.j[`heel${k}`]);
+    const FL = heel.distanceTo(toe);
+    const fw = 0.36 * FL;
+    const toeDir = new THREE.Vector3().subVectors(toe, ball);
+    const tlen = Math.max(0.02, toeDir.length());
+    toeDir.normalize();
+    const mid = ank.clone().lerp(ball, 0.32).addScaledVector(up, -0.012 * sc);
+    // 엄지(안쪽) → 새끼(바깥쪽)
+    const offs = [-0.46, -0.2, 0.02, 0.22, 0.42];
+    const back = [0, 0.01, 0.02, 0.035, 0.055];
+    const tl = [1.0, 0.82, 0.74, 0.66, 0.56];
+    const rad = [0.0075, 0.0055, 0.0052, 0.005, 0.0048];
+    for (let i = 0; i < 5; i++) {
+      const head = ball.clone().addScaledVector(lat, offs[i] * fw).addScaledVector(toeDir, -back[i] * FL);
+      const base = mid.clone().addScaledVector(lat, offs[i] * fw * 0.55);
+      this.small.bone(base, head, rad[i] * sc, 1.15, 1.35);
+      const L = tlen * tl[i];
+      const n = i === 0 ? 2 : 3;
+      let p = head;
+      let dir = toeDir.clone(),
+        tw = up.clone().multiplyScalar(-1);
+      for (let j = 0; j < n; j++) {
+        if (j > 0) [dir, tw] = bend(dir, tw, 10);
+        const q = p.clone().addScaledVector(dir, (L / n) * (j === 0 ? 1.2 : 0.9));
+        this.small.bone(p, q, rad[i] * sc * 0.8, 0, 1.2);
+        p = q;
+      }
+    }
+    // 발목뼈(거골·주상골) 덩어리
+    this.small.ball(ank.clone().addScaledVector(up, -0.01 * sc), 0.016 * sc);
+    this.small.ball(ank.clone().lerp(ball, 0.25).addScaledVector(up, -0.02 * sc), 0.014 * sc);
   }
 
   private buildKettlebell() {
@@ -489,14 +682,24 @@ export class Rig {
         toe = P(`toe${k}`);
       B[`femur${k}`].set(hip, knee);
       B[`tibia${k}`].set(knee, ank);
+      {
+        const th = new THREE.Vector3().subVectors(knee, hip).normalize();
+        const sh = new THREE.Vector3().subVectors(ank, knee).normalize();
+        const front = new THREE.Vector3().subVectors(th, sh);
+        if (front.lengthSq() < 1e-3) {
+          const Rf0 = k === "L" ? f.R.footL : f.R.footR;
+          front.set(Rf0[2], Rf0[5], Rf0[8]);
+        }
+        front.normalize();
+        this.patella[k].position.copy(knee).addScaledVector(front, 0.022 * (H / 1.75));
+        this.patella[k].scale.set(0.013 * (H / 1.75), 0.016 * (H / 1.75), 0.008 * (H / 1.75));
+        this.patella[k].quaternion.setFromUnitVectors(UP, th.clone().add(sh).normalize());
+      }
       const Rf = k === "L" ? f.R.footL : f.R.footR;
       const lat = new THREE.Vector3(Rf[0], Rf[3], Rf[6]).multiplyScalar((k === "L" ? 1 : -1) * 0.022 * (H / 1.75));
       const k2 = knee.clone().lerp(ank, 0.06).add(lat);
       B[`fibula${k}`].set(k2, ank.clone().add(lat.clone().multiplyScalar(0.8)));
       B[`calc${k}`].set(heel.clone().lerp(ank, 0.15), ank.clone().lerp(ball, 0.2));
-      B[`meta${k}`].set(ank.clone().lerp(ball, 0.15), ball);
-      B[`meta2${k}`].set(ank.clone().lerp(ball, 0.3).add(lat.clone().multiplyScalar(0.9)), ball.clone().add(lat.clone().multiplyScalar(1.1)));
-      B[`toes${k}`].set(ball, toe);
       const sh = P(`sh${k}`),
         el = P(`el${k}`),
         wr = P(`wr${k}`),
@@ -511,12 +714,22 @@ export class Rig {
       const off = new THREE.Vector3().crossVectors(fd, sideV).normalize().multiplyScalar(0.011 * (H / 1.75));
       B[`radius${k}`].set(el.clone().add(off), wr.clone().add(off));
       B[`ulna${k}`].set(el.clone().sub(off), wr.clone().sub(off));
-      B[`hand${k}`].set(wr, fi);
       const notch = P("c7").add(ty.clone().multiplyScalar(-0.03 * H)).add(tz.clone().multiplyScalar(0.075 * H)).add(sideV.clone().multiplyScalar(0.012 * H));
       B[`clav${k}`].set(notch, sh.clone().add(tz.clone().multiplyScalar(-0.006 * H)));
-      const scTop = sh.clone().add(tz.clone().multiplyScalar(-0.05 * H)).add(sideV.clone().multiplyScalar(-0.02 * H));
-      B[`scap${k}`].set(scTop.clone().add(ty.clone().multiplyScalar(-0.1 * H)).add(sideV.clone().multiplyScalar(-0.03 * H)), scTop);
+      // 견갑골: 등 뒤의 얇은 삼각판 (흉곽 좌표계에 붙어 움직인다)
+      const sp = this.scap[k];
+      const RtS = m4From(Rt, [0, 0, 0]);
+      sp.position.copy(sh).addScaledVector(tz, -0.06 * H).addScaledVector(ty, -0.055 * H).addScaledVector(sideV, -0.035 * H);
+      sp.quaternion.setFromRotationMatrix(RtS);
+      sp.rotateY((k === "L" ? -1 : 1) * 0.4);
+      sp.scale.set(0.034 * H, 0.05 * H, 0.006 * H);
     }
+    this.small.begin();
+    for (const k of ["L", "R"] as const) {
+      this.drawHand(f, k);
+      this.drawFoot(f, k);
+    }
+    this.small.end();
     const head = P("head");
     const c7 = P("c7");
     const neckTop = head.clone().lerp(c7, 0.38);

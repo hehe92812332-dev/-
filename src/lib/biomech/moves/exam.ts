@@ -68,11 +68,18 @@ const sitReach: Movement = {
     const spec0 = angleSpec(b, v);
     const p0 = buildPose(b, spec0);
     const soleZ = Math.max(p0.j.ankleL[2], p0.j.ankleR[2]) + b.ankleH[0];
+    // 팔은 처음부터 끝까지 같은 방식(역기구학)으로: 어깨 높이 앞쪽 → 발끝 너머 바닥 쪽으로 목표가 연속 이동
+    const shY = (p0.j.shL[1] + p0.j.shR[1]) / 2;
+    const shZ = (p0.j.shL[2] + p0.j.shR[2]) / 2;
+    const reach = b.upperArm + b.forearm + b.hand * 0.45;
+    const e = smooth(d);
+    const ty = lerp(shY - 0.05, 0.14, e);
+    const tz = lerp(shZ + reach * 1.3, soleZ + 1.5, e);
     const arms: [ArmSpec, ArmSpec] = [
-      { ik: [0.03, 0.14, soleZ + 1.5], pole: [0.2, 1, 0] },
-      { ik: [-0.03, 0.14, soleZ + 1.5], pole: [-0.2, 1, 0] },
+      { ik: [0.03 + 0.1 * (1 - e), ty, tz], pole: [0.2, 1, 0] },
+      { ik: [-0.03 - 0.1 * (1 - e), ty, tz], pole: [-0.2, 1, 0] },
     ];
-    const spec = { ...spec0, arms: d < 0.02 ? spec0.arms : arms };
+    const spec = { ...spec0, arms };
     const pose = buildPose(b, spec);
     return {
       spec,

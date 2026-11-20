@@ -7,7 +7,7 @@ self.onmessage = (e: MessageEvent<SimRequest>) => {
   const { id, profile, moveId, loadKg } = e.data;
   try {
     const t0 = performance.now();
-    const r = simulate(profile as Partial<Profile>, moveId, { loadKg, frames: 72, reference: true });
+    const r = simulate(profile as Partial<Profile>, moveId, { loadKg, frames: 120, reference: true });
     const out = pack(r, performance.now() - t0);
     (self as unknown as Worker).postMessage({ id, ok: true, result: out });
   } catch (err) {
