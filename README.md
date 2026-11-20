@@ -138,7 +138,7 @@ node scripts/ui-check.cjs http://localhost:3000   # 모든 동작을 데스크�
    (관리자 지정에 이메일을 쓰려면 이메일 동의항목 필요 · 비즈 앱 전환)
 4. **네이버 개발자센터**: 애플리케이션 등록 → Callback `https://도메인/api/auth/callback/naver` → `AUTH_NAVER_ID/SECRET`
 5. **토스페이먼츠**: 개발자센터 테스트 키로 결제·취소·정기결제를 확인 → 가맹점 계약·심사 후 라이브 키로 교체. 정기결제(빌링)는 별도 계약이 필요합니다.
-6. **크론**: Vercel **Pro 이상** 필요(무료 플랜은 하루 1회만 허용해 배포 실패). `vercel.json`이 서울 리전(`icn1`)에서 10분마다 `/api/cron/sweep`을 호출합니다 (`CRON_SECRET`) — 기한 정산, 자동 등급 낮추기, 블라인드 평가 공개, 멤버십 갱신, 알림. 다른 호스팅에서는 외부 크론으로 `Authorization: Bearer <CRON_SECRET>` 헤더를 붙여 호출하세요.
+6. **크론**: 무료(Hobby) 플랜에 맞춰 `vercel.json`은 하루 1번(한국 시간 자정 무렵, Hobby는 그 시간대 안에서 실행 시각이 달라질 수 있음) `/api/cron/sweep`을 호출합니다. 기한 정산 등이 최대 하루 늦어질 수 있으니, 운영 단계에서는 Pro로 올리고 `"*/10 * * * *"`(10분마다)로 바꾸거나 외부 크론을 쓰세요. 서울 리전(`icn1`) (`CRON_SECRET`) — 기한 정산, 자동 등급 낮추기, 블라인드 평가 공개, 멤버십 갱신, 알림. 다른 호스팅에서는 외부 크론으로 `Authorization: Bearer <CRON_SECRET>` 헤더를 붙여 호출하세요.
 7. **서류 저장소**: 운영에서는 `STORAGE_DRIVER=s3`와 S3 호환 저장소(AWS S3, Cloudflare R2, Supabase Storage 등) 정보를 넣으세요. 넣지 않으면 DB에 저장됩니다.
 8. **DB 연결 수**: 서버리스는 인스턴스마다 연결 풀을 만들므로 PgBouncer/Neon·Supabase 풀러 주소를 `DATABASE_URL`로 쓰세요. 자체 서버는 `npm run start:cluster`(코어 수만큼 프로세스)로 실행하세요.
 9. `ADMIN_EMAILS`에 운영자 이메일을 넣고 그 계정으로 로그인하면 `/admin`이 열립니다.

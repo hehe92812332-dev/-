@@ -1,4 +1,4 @@
 {
   "regions": ["icn1"],
-  "crons": [{ "path": "/api/cron/sweep", "schedule": "*/10 * * * *" }]
+  "crons": [{ "path": "/api/cron/sweep", "schedule": "0 15 * * *" }]
 }
