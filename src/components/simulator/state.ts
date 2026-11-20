@@ -108,7 +108,9 @@ export function useSimulation(profile: Profile, moveId: string, loadKg: number) 
 
   useEffect(() => {
     try {
-      worker.current = new Worker(new URL("./sim.worker.ts", import.meta.url));
+      // 독립 실행 번들(정적 호스팅)에서는 전역으로 워커 파일 경로를 넘긴다
+      const standalone = (globalThis as { __SIM_WORKER_URL?: string }).__SIM_WORKER_URL;
+      worker.current = standalone ? new Worker(standalone) : new Worker(new URL("./sim.worker.ts", import.meta.url));
       worker.current.onmessage = (e: MessageEvent<{ id: number; ok: boolean; result?: LiteResult; error?: string }>) => {
         if (e.data.id !== latest.current) return;
         setPending(false);
