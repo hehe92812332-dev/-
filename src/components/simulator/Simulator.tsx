@@ -30,7 +30,7 @@ export function Simulator() {
   const tRef = useRef(0);
   const [tUi, setTUi] = useState(0);
   const [frame, setFrame] = useState<LiteFrame | null>(null);
-  const [opts, setOpts] = useState<ViewOpts>({ risk: true, ghost: false, trails: false, overlays: true, labels: true });
+  const [opts, setOpts] = useState<ViewOpts>({ dark: true, skin: true, risk: true, ghost: false, trails: false, overlays: true, labels: true });
   const [preset, setPreset] = useState<Preset>("oblique");
   const [nonce, setNonce] = useState(0);
   const [leftTab, setLeftTab] = useState<"move" | "body">("move");
@@ -246,9 +246,9 @@ export function Simulator() {
             )}
           </header>
 
-          <div className="relative h-[58vh] min-h-[360px] bg-[#f6f4ef] lg:h-auto lg:flex-1">
+          <div className={`relative h-[58vh] min-h-[360px] lg:h-auto lg:flex-1 ${opts.dark ? "bg-[#0c0f13]" : "bg-[#f6f4ef]"}`}>
             <Viewport result={result} tRef={tRef} opts={opts} onFrame={onFrame} preset={preset} presetNonce={nonce} />
-            {fade > 0 && <div key={fade} className="sim-fade pointer-events-none absolute inset-0 bg-[#f6f4ef]" aria-hidden="true" />}
+            {fade > 0 && <div key={fade} className={`sim-fade pointer-events-none absolute inset-0 ${opts.dark ? "bg-[#0c0f13]" : "bg-[#f6f4ef]"}`} aria-hidden="true" />}
             <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-1">
               <span className="pointer-events-auto w-fit rounded-[4px] bg-[#161616] px-2 py-[3px] text-[12px] font-bold text-white">{frame?.phase ?? "계산 중"}</span>
               {pending && <span className="w-fit rounded-[4px] bg-white/90 px-2 py-[2px] text-[11px] font-semibold text-[#6e6a63] ring-1 ring-[#e3dfd6]">다시 계산하는 중…</span>}
@@ -272,6 +272,12 @@ export function Simulator() {
                 ]}
               />
               <div className="flex flex-wrap justify-end gap-1">
+                <Toggle on={opts.dark} onChange={(v) => setOpts((o) => ({ ...o, dark: v }))}>
+                  어두운 배경
+                </Toggle>
+                <Toggle on={opts.skin} onChange={(v) => setOpts((o) => ({ ...o, skin: v }))}>
+                  피부
+                </Toggle>
                 <Toggle on={opts.risk} onChange={(v) => setOpts((o) => ({ ...o, risk: v }))}>
                   부상 위험
                 </Toggle>
@@ -287,7 +293,7 @@ export function Simulator() {
                 </Toggle>
               </div>
             </div>
-            <div className="pointer-events-none absolute bottom-2 left-3 hidden text-[11px] leading-4 text-[#8a857c] sm:block">
+            <div className={`pointer-events-none absolute bottom-2 left-3 hidden text-[11px] leading-4 sm:block ${opts.dark ? "text-[#9aa3ad]" : "text-[#8a857c]"}`}>
               <span className="font-semibold text-[#0f8b6c]">●</span> 무게중심 · <span className="font-semibold text-[#7a5cd6]">―</span> 발끝 방향 · <span className="font-semibold text-[#d9433b]">―</span> 무릎 방향 · <span className="font-semibold text-[#d9432b]">●</span> 부상 위험 부위 · 드래그로 회전, 휠로 확대
             </div>
           </div>

@@ -5,6 +5,7 @@ import type { Mat3, Vec3 } from "@/lib/biomech/math";
 import type { Joints } from "@/lib/biomech/pose";
 import type { Surface } from "@/lib/biomech/types";
 import type { LiteFrame } from "./transfer";
+import { Anatomy, skinMaterial } from "./anatomy";
 
 const C = {
   bone: 0xe9dec6,
@@ -135,6 +136,8 @@ export interface LabelPoint {
 }
 
 export interface RigOptions {
+  dark?: boolean;
+  skin?: boolean;
   risk?: boolean;
   ghost: boolean;
   trails: boolean;
@@ -154,15 +157,12 @@ export class Rig {
   trails = new THREE.Group();
   surfaces = new THREE.Group();
   H = 1.75;
-  bones: Record<string, Bone> = {};
-  vert: THREE.InstancedMesh;
   small!: SmallBones;
-  patella: Record<string, THREE.Mesh> = {};
-  scap: Record<string, THREE.Mesh> = {};
-  ribs: THREE.Mesh[] = [];
-  sternum: THREE.Mesh;
-  pelvis: THREE.Group;
-  skull: THREE.Group;
+  anat!: Anatomy;
+  private ground!: THREE.Mesh;
+  private grid!: THREE.GridHelper;
+  private hemi!: THREE.HemisphereLight;
+  private dark = false;
   mats: Record<string, THREE.Material>;
   comBall: THREE.Mesh;
   comLine: THREE.Line;
@@ -207,7 +207,8 @@ export class Rig {
     this.controls.addEventListener("start", () => (this.camGoal = null));
 
     // 조명
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0xcfc8b8, 1.15));
+    this.hemi = new THREE.HemisphereLight(0xffffff, 0xcfc8b8, 1.15);
+    this.scene.add(this.hemi);
     const sun = new THREE.DirectionalLight(0xffffff, 1.35);
     sun.position.set(2.5, 5, 3.5);
     sun.castShadow = true;
@@ -226,14 +227,16 @@ export class Rig {
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     this.scene.add(ground);
+    this.ground = ground;
     const grid = new THREE.GridHelper(40, 80, C.grid, C.grid);
     (grid.material as THREE.Material).transparent = true;
     (grid.material as THREE.Material).opacity = 0.55;
     grid.position.y = 0.001;
     this.scene.add(grid);
+    this.grid = grid;
 
     this.mats = {
-      bone: new THREE.MeshStandardMaterial({ color: C.bone, roughness: 0.72 }),
+      bone: new THREE.MeshStandardMaterial({ color: C.bone, roughness: 0.58, metalness: 0.02 }),
       knob: new THREE.MeshStandardMaterial({ color: C.knob, roughness: 0.65 }),
       shade: new THREE.MeshStandardMaterial({ color: C.boneShade, roughness: 0.8 }),
       dark: new THREE.MeshStandardMaterial({ color: 0x2b2a27, roughness: 0.9 }),
@@ -247,42 +250,14 @@ export class Rig {
     this.root.add(this.skel, this.gear, this.over, this.ghost, this.trails, this.surfaces);
 
     this.small = new SmallBones(this.skel, this.mats.bone, this.mats.knob, 140);
-    for (const k of ["L", "R"]) {
-      const pt = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), this.mats.knob);
-      pt.castShadow = true;
-      this.patella[k] = pt;
-      this.skel.add(pt);
-      // 아래가 뾰족한 역삼각형 판
-      const tri = new THREE.Shape();
-      tri.moveTo(-0.55, 0.5);
-      tri.lineTo(0.6, 0.45);
-      tri.lineTo(-0.15, -0.95);
-      tri.closePath();
-      const sg = new THREE.ExtrudeGeometry(tri, { depth: 0.6, bevelEnabled: true, bevelThickness: 0.25, bevelSize: 0.12, bevelSegments: 2 });
-      if (k === "R") sg.scale(-1, 1, 1);
-      const sc2 = new THREE.Mesh(sg, this.mats.shade);
-      sc2.castShadow = true;
-      this.scap[k] = sc2;
-      this.skel.add(sc2);
-    }
-    this.vert = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), this.mats.knob, 26);
-    this.vert.castShadow = true;
-    this.skel.add(this.vert);
-    for (let i = 0; i < 10; i++) {
-      const arc = Math.PI * 1.72;
-      const g = new THREE.TorusGeometry(1, 0.06, 5, 30, arc);
-      g.rotateZ(Math.PI / 2 + (Math.PI * 2 - arc) / 2);
-      g.rotateX(Math.PI / 2);
-      const r = new THREE.Mesh(g, this.mats.bone);
-      r.castShadow = true;
-      this.ribs.push(r);
-      this.skel.add(r);
-    }
-    this.sternum = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.mats.knob);
-    this.skel.add(this.sternum);
-    this.pelvis = new THREE.Group();
-    this.skull = new THREE.Group();
-    this.skel.add(this.pelvis, this.skull);
+    this.anat = new Anatomy({
+      bone: this.mats.bone,
+      cart: new THREE.MeshStandardMaterial({ color: 0xc9d4d8, roughness: 0.45, transparent: true, opacity: 0.92 }),
+      dark: this.mats.dark,
+      tooth: new THREE.MeshStandardMaterial({ color: 0xf3efe2, roughness: 0.35 }),
+      skin: skinMaterial(0x9fb0c0),
+    });
+    this.skel.add(this.anat.group);
 
     // 오버레이
     this.comBall = new THREE.Mesh(new THREE.SphereGeometry(0.022, 18, 12), new THREE.MeshBasicMaterial({ color: C.com, depthTest: false }));
@@ -372,69 +347,24 @@ export class Rig {
     }
   }
 
-  setBody(H: number) {
-    if (Math.abs(H - this.H) < 1e-3 && Object.keys(this.bones).length) return;
+  setBody(H: number, bmi = 22) {
     this.H = H;
-    for (const b of Object.values(this.bones)) {
-      this.skel.remove(b.shaft);
-      if (b.a) this.skel.remove(b.a);
-      if (b.b) this.skel.remove(b.b);
-    }
-    this.bones = {};
-    const s = H / 1.75;
-    const mk = (k: string, r0: number, r1: number, ka: number, kb: number, mat = this.mats.bone) =>
-      (this.bones[k] = new Bone(this.skel, mat, this.mats.knob, r0 * s, r1 * s, ka * s, kb * s));
-    for (const k of ["L", "R"]) {
-      mk(`femur${k}`, 0.017, 0.0125, 0.026, 0.03);
-      mk(`tibia${k}`, 0.0145, 0.011, 0.0, 0.017);
-      mk(`fibula${k}`, 0.005, 0.005, 0.008, 0.008, this.mats.shade);
-      mk(`calc${k}`, 0.017, 0.012, 0.018, 0);
-      mk(`humerus${k}`, 0.012, 0.0095, 0.024, 0.018);
-      mk(`radius${k}`, 0.0072, 0.0062, 0.0, 0.01);
-      mk(`ulna${k}`, 0.0062, 0.0052, 0.012, 0, this.mats.shade);
-      mk(`clav${k}`, 0.0062, 0.0062, 0.008, 0.009);
-    }
-    mk("neck", 0.011, 0.011, 0, 0, this.mats.knob);
-    // 골반
-    this.pelvis.clear();
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(1, 0.14, 8, 34), this.mats.bone);
-    ring.rotation.x = Math.PI / 2 + 0.35;
-    ring.scale.set(0.072 * H, 0.05 * H, 0.072 * H);
-    ring.position.set(0, 0.012 * H, 0.0);
-    ring.castShadow = true;
-    // 장골 날개: 위쪽이 넓은 얇은 부채꼴, 앞바깥쪽(약 40°)을 향한다
-    const wingG = new THREE.SphereGeometry(1, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.55);
-    for (const sgn of [1, -1]) {
-      const w = new THREE.Mesh(wingG, this.mats.bone);
-      w.scale.set(0.043 * H, 0.05 * H, 0.008 * H);
-      w.rotation.set(0.12, sgn * 0.7, 0);
-      w.position.set(sgn * 0.058 * H, 0.03 * H, -0.01 * H);
-      w.castShadow = true;
-      this.pelvis.add(w);
-    }
-    const sac = new THREE.Mesh(new THREE.ConeGeometry(0.03 * H, 0.07 * H, 10), this.mats.knob);
-    sac.rotation.x = Math.PI;
-    sac.position.set(0, 0.035 * H, -0.035 * H);
-    this.pelvis.add(ring, sac);
-    // 두개골
-    this.skull.clear();
-    const cran = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 20), this.mats.bone);
-    cran.scale.set(0.05 * H, 0.056 * H, 0.06 * H);
-    cran.position.set(0, 0.012 * H, -0.006 * H);
-    cran.castShadow = true;
-    const face = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), this.mats.bone);
-    face.scale.set(0.038 * H, 0.036 * H, 0.03 * H);
-    face.position.set(0, -0.02 * H, 0.03 * H);
-    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.052 * H, 0.016 * H, 0.04 * H), this.mats.knob);
-    jaw.position.set(0, -0.045 * H, 0.03 * H);
-    this.skull.add(cran, face, jaw);
-    for (const sgn of [1, -1]) {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.0115 * H, 12, 10), this.mats.dark);
-      eye.position.set(sgn * 0.017 * H, -0.002 * H, 0.052 * H);
-      this.skull.add(eye);
-    }
-    this.vert.geometry.dispose();
-    this.vert.geometry = new THREE.BoxGeometry(0.028 * s, 0.016 * s, 0.024 * s);
+    this.anat.setGirth(bmi);
+    this.anat.invalidate();
+  }
+
+  /** 해부 모드: 어두운 배경 + 반투명 피부 */
+  setLook(dark: boolean, skin: boolean) {
+    this.anat.setSkin(skin);
+    if (dark === this.dark) return;
+    this.dark = dark;
+    this.renderer.setClearColor(dark ? 0x0c0f13 : 0xf6f4ef, 1);
+    (this.ground.material as THREE.MeshStandardMaterial).color.setHex(dark ? 0x14181d : C.ground);
+    const gm = this.grid.material as THREE.LineBasicMaterial;
+    gm.color.setHex(dark ? 0x262d35 : C.grid);
+    gm.opacity = dark ? 0.8 : 0.55;
+    this.hemi.groundColor.setHex(dark ? 0x30343a : 0xcfc8b8);
+    this.hemi.intensity = dark ? 0.95 : 1.15;
   }
 
   /** 손을 쥐고 있는지 (바·덤벨·케틀벨·철봉) */
@@ -667,120 +597,18 @@ export class Rig {
   /** 프레임 표시. ghost = 표준 체형 같은 시점 프레임 */
   setFrame(f: LiteFrame, ghost: LiteFrame | undefined, opt: RigOptions, trails?: { com: Vec3[]; bar?: Vec3[] }) {
     if (this.disposed) return;
-    // 체형 정보가 오기 전에 첫 프레임이 그려질 수 있다 (빌드 환경에 따라 effect 순서가 다름)
-    if (!Object.keys(this.bones).length) this.setBody(this.H);
     const j = f.j;
     const H = this.H;
-    const P = (k: keyof Joints) => tv(j[k]);
-    const B = this.bones;
-    for (const k of ["L", "R"] as const) {
-      const hip = P(`hip${k}`),
-        knee = P(`knee${k}`),
-        ank = P(`ankle${k}`),
-        heel = P(`heel${k}`),
-        ball = P(`ball${k}`),
-        toe = P(`toe${k}`);
-      B[`femur${k}`].set(hip, knee);
-      B[`tibia${k}`].set(knee, ank);
-      {
-        const th = new THREE.Vector3().subVectors(knee, hip).normalize();
-        const sh = new THREE.Vector3().subVectors(ank, knee).normalize();
-        const front = new THREE.Vector3().subVectors(th, sh);
-        if (front.lengthSq() < 1e-3) {
-          const Rf0 = k === "L" ? f.R.footL : f.R.footR;
-          front.set(Rf0[2], Rf0[5], Rf0[8]);
-        }
-        front.normalize();
-        this.patella[k].position.copy(knee).addScaledVector(front, 0.022 * (H / 1.75));
-        this.patella[k].scale.set(0.013 * (H / 1.75), 0.016 * (H / 1.75), 0.008 * (H / 1.75));
-        this.patella[k].quaternion.setFromUnitVectors(UP, th.clone().add(sh).normalize());
-      }
-      const Rf = k === "L" ? f.R.footL : f.R.footR;
-      const lat = new THREE.Vector3(Rf[0], Rf[3], Rf[6]).multiplyScalar((k === "L" ? 1 : -1) * 0.022 * (H / 1.75));
-      const k2 = knee.clone().lerp(ank, 0.06).add(lat);
-      B[`fibula${k}`].set(k2, ank.clone().add(lat.clone().multiplyScalar(0.8)));
-      B[`calc${k}`].set(heel.clone().lerp(ank, 0.15), ank.clone().lerp(ball, 0.2));
-      const sh = P(`sh${k}`),
-        el = P(`el${k}`),
-        wr = P(`wr${k}`),
-        fi = P(`fing${k}`);
-      B[`humerus${k}`].set(sh, el);
-      const Rt = f.R.thorax;
-      const tx = new THREE.Vector3(Rt[0], Rt[3], Rt[6]);
-      const tz = new THREE.Vector3(Rt[2], Rt[5], Rt[8]);
-      const ty = new THREE.Vector3(Rt[1], Rt[4], Rt[7]);
-      const sideV = tx.clone().multiplyScalar(k === "L" ? 1 : -1);
-      const fd = new THREE.Vector3().subVectors(wr, el);
-      const off = new THREE.Vector3().crossVectors(fd, sideV).normalize().multiplyScalar(0.011 * (H / 1.75));
-      B[`radius${k}`].set(el.clone().add(off), wr.clone().add(off));
-      B[`ulna${k}`].set(el.clone().sub(off), wr.clone().sub(off));
-      const notch = P("c7").add(ty.clone().multiplyScalar(-0.03 * H)).add(tz.clone().multiplyScalar(0.075 * H)).add(sideV.clone().multiplyScalar(0.012 * H));
-      B[`clav${k}`].set(notch, sh.clone().add(tz.clone().multiplyScalar(-0.006 * H)));
-      // 견갑골: 등 뒤의 얇은 삼각판 (흉곽 좌표계에 붙어 움직인다)
-      const sp = this.scap[k];
-      const RtS = m4From(Rt, [0, 0, 0]);
-      sp.position.copy(sh).addScaledVector(tz, -0.06 * H).addScaledVector(ty, -0.055 * H).addScaledVector(sideV, -0.035 * H);
-      sp.quaternion.setFromRotationMatrix(RtS);
-      sp.rotateY((k === "L" ? -1 : 1) * 0.4);
-      sp.scale.set(0.034 * H, 0.05 * H, 0.006 * H);
-    }
+    this.anat.update(f, H);
     this.small.begin();
     for (const k of ["L", "R"] as const) {
       this.drawHand(f, k);
       this.drawFoot(f, k);
     }
     this.small.end();
-    const head = P("head");
-    const c7 = P("c7");
-    const neckTop = head.clone().lerp(c7, 0.38);
-    B.neck.set(c7, neckTop);
-    // 척추 마디
-    const pts: [V, V, number, Mat3][] = [
-      [P("l5"), P("t12"), 5, f.R.lumbar],
-      [P("t12"), c7, 12, f.R.thorax],
-      [c7, neckTop, 6, f.R.head],
-    ];
-    let idx = 0;
-    const mtx = new THREE.Matrix4();
-    for (const [a, b, n, R] of pts) {
-      for (let i = 0; i < n; i++) {
-        const p = a.clone().lerp(b, (i + 0.5) / n);
-        const m = m4From(R, [p.x, p.y, p.z]);
-        const sc = n === 5 ? 1.35 : n === 12 ? 1 : 0.75;
-        mtx.copy(m).multiply(new THREE.Matrix4().makeScale(sc, 1, sc));
-        this.vert.setMatrixAt(idx++, mtx);
-      }
-    }
-    this.vert.count = idx;
-    this.vert.instanceMatrix.needsUpdate = true;
-    // 갈비뼈
-    const Rt = f.R.thorax;
-    const t12 = P("t12");
-    const thLen = t12.distanceTo(c7);
-    const RtM = m4From(Rt, [0, 0, 0]);
-    for (let i = 0; i < this.ribs.length; i++) {
-      const u = 0.12 + (i / (this.ribs.length - 1)) * 0.8;
-      const w = (0.06 + 0.035 * Math.sin(Math.PI * (0.25 + u * 0.75))) * H * (i === this.ribs.length - 1 ? 0.75 : 1);
-      const d = (0.045 + 0.022 * Math.sin(Math.PI * (0.2 + u * 0.7))) * H;
-      const r = this.ribs[i];
-      const base = t12.clone().lerp(c7, u);
-      const loc = new THREE.Vector3(0, -0.012 * H, d * 0.92).applyMatrix4(RtM);
-      r.position.copy(base).add(loc);
-      r.quaternion.setFromRotationMatrix(RtM);
-      r.rotateX(0.32);
-      r.scale.set(w, 0.09, d);
-    }
-    const st = c7.clone().add(new THREE.Vector3(0, -0.45 * thLen, 0.105 * H).applyMatrix4(RtM));
-    this.sternum.position.copy(st);
-    this.sternum.quaternion.setFromRotationMatrix(RtM);
-    this.sternum.rotateX(0.18);
-    this.sternum.scale.set(0.018 * H, 0.5 * thLen, 0.01 * H);
-    // 골반, 두개골
-    this.pelvis.matrixAutoUpdate = false;
-    this.pelvis.matrix.copy(m4From(f.R.pelvis, j.pelvis));
-    this.skull.matrixAutoUpdate = false;
-    this.skull.matrix.copy(m4From(f.R.head, j.head));
+    void j;
 
+    this.setLook(opt.dark ?? true, opt.skin ?? true);
     this.updateGear(f);
     this.updateRisk(f, opt.risk ?? true);
     this.setSurfaces(f.surfaces);
