@@ -55,3 +55,47 @@ body {
 @utility chip {
   @apply inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600;
 }
+
+/* 동작 시뮬레이터 슬라이더 */
+.sim-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 16px;
+  cursor: pointer;
+}
+.sim-range:focus-visible {
+  outline: 2px solid #0f8b6c;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+.sim-range::-webkit-slider-runnable-track {
+  height: 2px;
+  background: transparent;
+}
+.sim-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -5px;
+  border-radius: 2px;
+  background: #161616;
+  border: 2px solid #fbfaf7;
+  box-shadow: 0 0 0 1px #161616;
+}
+.sim-range::-moz-range-track {
+  height: 2px;
+  background: transparent;
+}
+.sim-range::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: #161616;
+  border: 2px solid #fbfaf7;
+  box-shadow: 0 0 0 1px #161616;
+}
+header .sim-range,
+.sim-track .sim-range {
+  background: linear-gradient(#d9d4c9, #d9d4c9) center / 100% 2px no-repeat;
+}

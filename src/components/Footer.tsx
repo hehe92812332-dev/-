@@ -17,6 +17,7 @@ export function Footer() {
           <Link href="/qa">환자 Q&A</Link>
           <Link href="/clinical">임상 토론</Link>
           <Link href="/therapists">치료사 찾기</Link>
+          <Link href="/simulator">동작 보상 시뮬레이터</Link>
         </div>
         <div className="flex flex-col gap-2">
           <span className="font-semibold text-slate-700">안내</span>
